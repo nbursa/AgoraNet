@@ -1,0 +1,31 @@
+# Binaries & build artifacts
+bin/
+*.exe
+*.out
+*.test
+*.o
+
+# Go modules
+go.sum
+go.work
+go.work.sum
+
+# Environment variables
+.env
+
+# Editor/IDE files
+.vscode/
+.idea/
+*.swp
+
+# Logs & debug
+*.log
+debug/
+trace.out
+
+# Dependency directories (vendor for Go modules)
+vendor/
+
+# OS-specific
+.DS_Store
+Thumbs.db
