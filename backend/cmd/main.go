@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"decentralized-plenum/config"
 	"decentralized-plenum/routes"
 
 	"github.com/gofiber/fiber/v2"
@@ -16,8 +17,10 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
-	app := fiber.New()
+	// Initialize Database
+	config.InitDatabase()
 
+	app := fiber.New()
 	routes.SetupRoutes(app)
 
 	port := os.Getenv("PORT")
