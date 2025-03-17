@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { io } from "socket.io-client";
+import { io, Socket } from "socket.io-client";
 
 const SIGNALING_SERVER =
   process.env.NEXT_PUBLIC_SIGNALING_SERVER || "http://localhost:8080";
@@ -9,7 +9,7 @@ const SIGNALING_SERVER =
 export function useWebRTC(roomId: string) {
   const [peers, setPeers] = useState<{ [id: string]: RTCPeerConnection }>({});
   const [stream, setStream] = useState<MediaStream | null>(null);
-  const socketRef = useRef(io(SIGNALING_SERVER));
+  const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
     async function start() {
@@ -18,7 +18,12 @@ export function useWebRTC(roomId: string) {
       });
       setStream(localStream);
 
+      // Initialize socket connection
+      if (!socketRef.current) {
+        socketRef.current = io(SIGNALING_SERVER);
+      }
       const socket = socketRef.current;
+
       socket.emit("join-room", roomId);
 
       socket.on("user-joined", async (userId: string) => {
@@ -68,16 +73,34 @@ export function useWebRTC(roomId: string) {
       });
 
       socket.on("answer", ({ userId, answer }) => {
-        peers[userId]?.setRemoteDescription(new RTCSessionDescription(answer));
+        if (peers[userId]) {
+          peers[userId].setRemoteDescription(new RTCSessionDescription(answer));
+        }
       });
 
       socket.on("ice-candidate", ({ userId, candidate }) => {
-        peers[userId]?.addIceCandidate(new RTCIceCandidate(candidate));
+        if (peers[userId]) {
+          peers[userId].addIceCandidate(new RTCIceCandidate(candidate));
+        }
+      });
+
+      socket.on("user-left", (userId: string) => {
+        setPeers((prev) => {
+          const newPeers = { ...prev };
+          if (newPeers[userId]) {
+            newPeers[userId].close();
+            delete newPeers[userId];
+          }
+          return newPeers;
+        });
       });
 
       return () => {
         Object.values(peers).forEach((peer) => peer.close());
-        socket.disconnect();
+        if (socketRef.current) {
+          socketRef.current.disconnect();
+          socketRef.current = null;
+        }
       };
     }
 
