@@ -21,14 +21,17 @@ func Register(c *fiber.Ctx) error {
 	}
 
 	// Hash password
-	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to hash password"})
+	}
 
 	// Create new user
 	user := models.User{Username: data.Username, Password: string(hashedPassword)}
 	result := config.DB.Create(&user)
 
 	if result.Error != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "User already exists"})
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "User already exists"})
 	}
 
 	return c.JSON(fiber.Map{"message": "User registered successfully"})
@@ -63,6 +66,5 @@ func Login(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not generate token"})
 	}
 
-	return c.JSON(fiber.Map{"token": token})
+	return c.JSON(fiber.Map{"message": "Login successful", "token": token})
 }
-

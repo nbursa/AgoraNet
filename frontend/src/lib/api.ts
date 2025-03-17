@@ -9,6 +9,24 @@ export const api = axios.create({
 
 // Login function
 export const login = async (username: string, password: string) => {
-  const res = await api.post("/auth/login", { username, password });
-  return res.data;
+  try {
+    const res = await api.post("/auth/login", { username, password });
+    return res.data;
+  } catch {
+    throw new Error("Invalid credentials");
+  }
 };
+
+// Check if the user is authenticated
+export function isAuthenticated(): boolean {
+  if (typeof window !== "undefined") {
+    return !!localStorage.getItem("token");
+  }
+  return false;
+}
+
+// Logout function
+export function logout() {
+  localStorage.removeItem("token");
+  window.location.href = "/login";
+}
