@@ -22,93 +22,54 @@ export function useWebRTC(roomId: string) {
   }, [roomId]);
 
   useEffect(() => {
-    const socket: Socket = io(SIGNALING_SERVER, { transports: ["websocket"] });
+    const socket: Socket = io(SIGNALING_SERVER, {
+      transports: ["websocket"],
+      withCredentials: true,
+      reconnection: true,
+    });
+
     socketRef.current = socket;
 
     const start = async () => {
-      const localStream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-      });
-      setStream(localStream);
+      try {
+        const localStream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+        });
+        setStream(localStream);
 
-      socket.emit("join-room", roomId);
+        socket.emit("join-room", roomId);
 
-      socket.on("user-joined", async (userId: string) => {
-        const peer = new RTCPeerConnection();
-        localStream
-          .getTracks()
-          .forEach((track) => peer.addTrack(track, localStream));
+        socket.on("user-joined", async (userId: string) => {
+          const peer = new RTCPeerConnection();
+          localStream
+            .getTracks()
+            .forEach((track) => peer.addTrack(track, localStream));
 
-        const offer = await peer.createOffer();
-        await peer.setLocalDescription(offer);
-        socket.emit("offer", { room: roomId, userId, offer });
+          const offer = await peer.createOffer();
+          await peer.setLocalDescription(offer);
+          socket.emit("offer", { room: roomId, userId, offer });
 
-        peer.onicecandidate = (event) => {
-          if (event.candidate) {
-            socket.emit("ice-candidate", {
-              room: roomId,
-              userId,
-              candidate: event.candidate,
-            });
+          peer.onicecandidate = (event) => {
+            if (event.candidate) {
+              socket.emit("ice-candidate", {
+                room: roomId,
+                userId,
+                candidate: event.candidate,
+              });
+            }
+          };
+
+          peersRef.current[userId] = peer;
+        });
+
+        socket.on("room-closed", (closedRoomId: string) => {
+          if (closedRoomId === roomId) {
+            leaveRoom();
           }
-        };
-
-        peersRef.current[userId] = peer;
-      });
-
-      socket.on("offer", async ({ userId, offer }) => {
-        const peer = new RTCPeerConnection();
-        localStream
-          .getTracks()
-          .forEach((track) => peer.addTrack(track, localStream));
-
-        await peer.setRemoteDescription(new RTCSessionDescription(offer));
-        const answer = await peer.createAnswer();
-        await peer.setLocalDescription(answer);
-
-        socket.emit("answer", { room: roomId, userId, answer });
-
-        peer.onicecandidate = (event) => {
-          if (event.candidate) {
-            socket.emit("ice-candidate", {
-              room: roomId,
-              userId,
-              candidate: event.candidate,
-            });
-          }
-        };
-
-        peersRef.current[userId] = peer;
-      });
-
-      socket.on("answer", ({ userId, answer }) => {
-        if (peersRef.current[userId]) {
-          peersRef.current[userId].setRemoteDescription(
-            new RTCSessionDescription(answer)
-          );
-        }
-      });
-
-      socket.on("ice-candidate", ({ userId, candidate }) => {
-        if (peersRef.current[userId]) {
-          peersRef.current[userId].addIceCandidate(
-            new RTCIceCandidate(candidate)
-          );
-        }
-      });
-
-      socket.on("user-left", (userId: string) => {
-        if (peersRef.current[userId]) {
-          peersRef.current[userId].close();
-          delete peersRef.current[userId];
-        }
-      });
-
-      socket.on("room-closed", (closedRoomId: string) => {
-        if (closedRoomId === roomId) {
-          leaveRoom();
-        }
-      });
+        });
+      } catch (error) {
+        console.error("❌ WebRTC initialization error:", error);
+      }
     };
 
     start();

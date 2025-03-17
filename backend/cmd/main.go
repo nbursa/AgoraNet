@@ -14,36 +14,41 @@ import (
 )
 
 func main() {
-	// Load environment variables
+	// ✅ Load environment variables
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		log.Fatal("❌ Error loading .env file")
 	}
 
-	// 🛠️ Initialize Database
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	// ✅ Debug: Print database type
+	log.Println("Database type:", os.Getenv("DB_TYPE"))
+
+	// Initialize Database
 	config.InitDatabase()
 
-	// Start WebRTC Signaling Server in a Goroutine
-	go services.StartSignalingServer()
+	// Start WebRTC Signaling Server
+	server := services.StartSignalingServer()
 
 	// Fiber Web API server
 	app := fiber.New()
 
 	// Enable CORS
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "http://localhost:3000",
+		AllowOrigins: "*",
 		AllowMethods: "GET,POST,PUT,DELETE,OPTIONS",
 		AllowHeaders: "Content-Type, Authorization",
+		AllowCredentials: true,
 	}))
 
-	// Setup API routes
-	routes.SetupRoutes(app)
+	// Setup API routes with socket server
+	routes.SetupRoutes(app, server)
 
-	// Start the Fiber API server
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
+	// Start Fiber API
 	log.Printf("🚀 Backend API running on http://localhost:%s", port)
 	log.Fatal(app.Listen(":" + port))
 }

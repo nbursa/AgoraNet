@@ -13,11 +13,28 @@ export default function HomePage() {
     setRooms(activeRooms);
   }, []);
 
-  const createRoom = () => {
+  const createRoom = async () => {
     const newRoomId = Math.random().toString(36).substring(2, 8);
     const updatedRooms = [...rooms, newRoomId];
     setRooms(updatedRooms);
     localStorage.setItem("activeRooms", JSON.stringify(updatedRooms));
+
+    // ✅ Register room in backend
+    try {
+      await fetch(
+        `${
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
+        }/create-room`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ roomId: newRoomId }),
+        }
+      );
+    } catch (error) {
+      console.error("Failed to notify backend about room creation:", error);
+    }
+
     router.push(`/rooms/${newRoomId}`);
   };
 
@@ -59,7 +76,7 @@ export default function HomePage() {
       </div>
 
       <h2 className="mt-8 text-xl font-semibold">Active Rooms</h2>
-      <div className="mt-4 w-full space-y-2">
+      <div className="mt-4 w-full space-y-2 flex flex-col items-center">
         {rooms.length > 0 ? (
           rooms.map((room) => (
             <div key={room} className="flex justify-between p-2 rounded-md">
