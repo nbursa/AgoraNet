@@ -1,7 +1,3 @@
-Here's a **short temporary README** for your project:
-
----
-
 # 🗣️ Decentralized Plenum
 
 **Decentralized, real-time voice discussion platform** built with **Go (Gin, Fiber), WebRTC, Socket.io, and Next.js**. Enables **secure, censorship-resistant, and self-hosted** voice communication.
