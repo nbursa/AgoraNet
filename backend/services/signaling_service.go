@@ -38,19 +38,33 @@ func StartSignalingServer() {
 		server.BroadcastToRoom("/", room, "user-joined", s.ID())
 	})
 
-	server.OnEvent("/", "offer", func(s socketio.Conn, data map[string]string) {
-		server.BroadcastToRoom("/", data["room"], "offer", data)
+	server.OnEvent("/", "leave-room", func(s socketio.Conn, room string) {
+		roomLock.Lock()
+		if rooms[room] != nil {
+			delete(rooms[room], s.ID())
+			server.BroadcastToRoom("/", room, "user-left", s.ID())
+
+			if len(rooms[room]) == 0 {
+				delete(rooms, room)
+				log.Println("Room closed:", room)
+				server.BroadcastToNamespace("/", "room-closed", room)
+			}
+		}
+		roomLock.Unlock()
+		s.Leave(room)
+		log.Println("User left room:", s.ID())
 	})
 
-	server.OnEvent("/", "answer", func(s socketio.Conn, data map[string]string) {
-		server.BroadcastToRoom("/", data["room"], "answer", data)
+	server.OnEvent("/", "close-room", func(s socketio.Conn, room string) {
+		roomLock.Lock()
+		if rooms[room] != nil {
+			delete(rooms, room)
+			log.Println("Room manually closed:", room)
+			server.BroadcastToNamespace("/", "room-closed", room)
+		}
+		roomLock.Unlock()
 	})
 
-	server.OnEvent("/", "ice-candidate", func(s socketio.Conn, data map[string]string) {
-		server.BroadcastToRoom("/", data["room"], "ice-candidate", data)
-	})
-
-	// Handle disconnection and cleanup
 	server.OnDisconnect("/", func(s socketio.Conn, reason string) {
 		log.Println("User disconnected:", s.ID(), "Reason:", reason)
 
@@ -59,12 +73,12 @@ func StartSignalingServer() {
 			if users[s.ID()] {
 				delete(users, s.ID())
 				server.BroadcastToRoom("/", room, "user-left", s.ID())
-				log.Println("User", s.ID(), "left room:", room)
 
-				// If room is empty, delete it
+				// If room is empty, delete it and notify the frontend
 				if len(users) == 0 {
 					delete(rooms, room)
 					log.Println("Room closed:", room)
+					server.BroadcastToNamespace("/", "room-closed", room)
 				}
 				break
 			}
@@ -75,12 +89,10 @@ func StartSignalingServer() {
 	go server.Serve()
 	defer server.Close()
 
-	// Set up HTTP server for WebSocket connection
 	router := gin.Default()
 	router.GET("/socket.io/*any", gin.WrapH(server))
 	router.POST("/socket.io/*any", gin.WrapH(server))
 
-	// Enable CORS
 	handler := cors.AllowAll().Handler(router)
 
 	log.Println("Signaling server started on :8080")

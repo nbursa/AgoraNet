@@ -1,11 +1,17 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useWebRTC } from "@/hooks/useWebRTC";
 
 export default function RoomPage() {
   const { id } = useParams();
-  const { stream, peers } = useWebRTC(id as string);
+  const { stream, peers, leaveRoom } = useWebRTC(id as string);
+  const router = useRouter();
+
+  const handleLeave = () => {
+    leaveRoom();
+    router.push("/");
+  };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
@@ -14,9 +20,7 @@ export default function RoomPage() {
         autoPlay
         controls
         ref={(audio) => {
-          if (audio && stream) {
-            audio.srcObject = stream;
-          }
+          if (audio && stream) audio.srcObject = stream;
         }}
       />
 
@@ -29,15 +33,22 @@ export default function RoomPage() {
             ref={(audio) => {
               if (audio) {
                 const remoteStream = new MediaStream();
-                peer.getReceivers().forEach((receiver) => {
-                  if (receiver.track) remoteStream.addTrack(receiver.track);
-                });
+                peer
+                  .getReceivers()
+                  .forEach((receiver) => remoteStream.addTrack(receiver.track));
                 audio.srcObject = remoteStream;
               }
             }}
           />
         ))}
       </div>
+
+      <button
+        onClick={handleLeave}
+        className="mt-6 bg-red-500 text-white px-6 py-2 rounded-md"
+      >
+        Leave Room
+      </button>
     </div>
   );
 }
