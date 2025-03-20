@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"sync"
@@ -132,7 +133,20 @@ func StartSignalingServer() *socketio.Server {
 	return server
 }
 
-// ✅ Function to close a room
+func CreateRoom(roomID string, server *socketio.Server) (string, int) {
+    if server == nil {
+        return "Server is not initialized", 500
+    }
+
+    server.OnConnect(roomID, func(s socketio.Conn) error {
+        s.SetContext("")
+        fmt.Println("connected:", s.ID())
+        return nil
+    })
+
+    return "Room created successfully", 200
+}
+
 func CloseRoom(room string, server *socketio.Server) (string, int) {
 	roomLock.Lock()
 	defer roomLock.Unlock()
