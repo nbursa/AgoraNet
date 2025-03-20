@@ -10,7 +10,7 @@ export default function RoomPage() {
 
   const handleLeave = () => {
     leaveRoom();
-    router.push("/");
+    router.push("/rooms");
   };
 
   return (
@@ -45,7 +45,7 @@ export default function RoomPage() {
 
       <button
         onClick={handleLeave}
-        className="mt-6 bg-red-500 text-white px-6 py-2 rounded-md"
+        className="mt-6 bg-red-500 text-white px-6 py-2 rounded-md hover:bg-red-600 hover:cursor-pointer"
       >
         Leave Room
       </button>
