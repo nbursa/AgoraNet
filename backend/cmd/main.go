@@ -7,17 +7,19 @@ import (
 
 	"decentralized-plenum/config"
 	"decentralized-plenum/routes"
+	"decentralized-plenum/services"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	socketio "github.com/googollee/go-socket.io"
 	"github.com/joho/godotenv"
 )
 
 func main() {
-    fmt.Println("🚀 Starting Decentralized Plenum Backend...")
+    fmt.Println("Starting Decentralized Plenum Backend...")
 
     if err := godotenv.Load(); err != nil {
-        log.Fatal("❌ Error loading .env file:", err)
+        log.Fatal("Error loading .env file:", err)
     }
 
     apiPort := os.Getenv("API_PORT")
@@ -55,10 +57,17 @@ func main() {
         AllowCredentials: true,
     }))
 
-    routes.SetupRoutes(app, nil)
+    server := socketio.NewServer(nil)
+    routes.SetupRoutes(app, server)
 
-    log.Printf("🚀 Fiber API running on http://localhost:%s", apiPort)
-    if err := app.Listen(":" + apiPort); err != nil {
-        log.Fatal("❌ Failed to start server:", err)
-    }
+    go func() {
+        log.Printf("🚀 Fiber API running on http://localhost:%s", apiPort)
+        if err := app.Listen(":" + apiPort); err != nil {
+            log.Fatal("❌ Failed to start server:", err)
+        }
+    }()
+
+    go func() {
+        services.StartSignalingServer(signalingPort, server)
+    }()
 }
