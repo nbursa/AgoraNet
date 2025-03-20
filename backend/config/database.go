@@ -3,7 +3,6 @@ package config
 import (
 	"decentralized-plenum/models"
 	"fmt"
-	"log"
 	"os"
 
 	"gorm.io/driver/sqlite"
@@ -12,20 +11,21 @@ import (
 
 var DB *gorm.DB
 
-func InitDatabase() {
+func InitDatabase() error {
 	var err error
 	dbType := os.Getenv("DB_TYPE")
+	dbPath := os.Getenv("DB_PATH")
 
 	if dbType == "sqlite" {
-		DB, err = gorm.Open(sqlite.Open(os.Getenv("DB_PATH")), &gorm.Config{})
+		DB, err = gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
+		if err != nil {
+			return fmt.Errorf("failed to connect to database: %w", err)
+		}
 	} else {
-		log.Fatal("Unsupported database type")
+		return fmt.Errorf("unsupported database type: %s", dbType)
 	}
 
-	if err != nil {
-		log.Fatal("Failed to connect to database:", err)
-	}
-
-	fmt.Println("Database connected!")
+	fmt.Println("✅ Database connected!")
 	DB.AutoMigrate(&models.User{})
+	return nil
 }
