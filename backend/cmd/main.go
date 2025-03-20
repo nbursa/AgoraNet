@@ -1,12 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
 	"decentralized-plenum/config"
 	"decentralized-plenum/routes"
-	"decentralized-plenum/services"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -14,41 +14,51 @@ import (
 )
 
 func main() {
-	// ✅ Load environment variables
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("❌ Error loading .env file")
-	}
+    fmt.Println("🚀 Starting Decentralized Plenum Backend...")
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
+    if err := godotenv.Load(); err != nil {
+        log.Fatal("❌ Error loading .env file:", err)
+    }
 
-	// ✅ Debug: Print database type
-	log.Println("Database type:", os.Getenv("DB_TYPE"))
+    apiPort := os.Getenv("API_PORT")
+    signalingPort := os.Getenv("SIGNALING_PORT")
+    websocketPort := os.Getenv("WS_PORT")
+    frontendURL := os.Getenv("FRONTEND_URL")
+    dbType := os.Getenv("DB_TYPE")
 
-	// Initialize Database
-	config.InitDatabase()
+    requiredVars := map[string]string{
+        "API_PORT":        apiPort,
+        "SIGNALING_PORT":  signalingPort,
+        "WS_PORT":         websocketPort,
+        "FRONTEND_URL":    frontendURL,
+        "DB_TYPE":         dbType,
+    }
 
-	// Start WebRTC Signaling Server
-	server := services.StartSignalingServer()
+    for key, value := range requiredVars {
+        if value == "" {
+            log.Fatalf("❌ Missing required environment variable: %s", key)
+        }
+    }
 
-	// Fiber Web API server
-	app := fiber.New()
+    log.Println("📦 Database type:", dbType)
 
-	// Enable CORS
-	app.Use(cors.New(cors.Config{
-		AllowOrigins: "*",
-		AllowMethods: "GET,POST,PUT,DELETE,OPTIONS",
-		AllowHeaders: "Content-Type, Authorization",
-		AllowCredentials: true,
-	}))
+    if err := config.InitDatabase(); err != nil {
+        log.Fatal("❌ Database initialization failed:", err)
+    }
 
-	// Setup API routes with socket server
-	routes.SetupRoutes(app, server)
+    app := fiber.New()
 
-	// Start Fiber API
-	log.Printf("🚀 Backend API running on http://localhost:%s", port)
-	log.Fatal(app.Listen(":" + port))
+    app.Use(cors.New(cors.Config{
+        AllowOrigins:     frontendURL,
+        AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
+        AllowHeaders:     "Content-Type, Authorization",
+        AllowCredentials: true,
+    }))
+
+    routes.SetupRoutes(app, nil)
+
+    log.Printf("🚀 Fiber API running on http://localhost:%s", apiPort)
+    if err := app.Listen(":" + apiPort); err != nil {
+        log.Fatal("❌ Failed to start server:", err)
+    }
 }
