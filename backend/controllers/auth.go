@@ -9,58 +9,57 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// Register a new user
 func Register(c *fiber.Ctx) error {
-	var data struct {
+	var input struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
 	}
 
-	if err := c.BodyParser(&data); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request"})
+	if err := c.BodyParser(&input); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request format"})
 	}
 
-	// Hash password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
+	if input.Username == "" || input.Password == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Missing username or password"})
+	}
+
+	var existingUser models.User
+	if result := config.DB.Where("username = ?", input.Username).First(&existingUser); result.RowsAffected > 0 {
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "Username already exists"})
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to hash password"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Password encryption failed"})
 	}
 
-	// Create new user
-	user := models.User{Username: data.Username, Password: string(hashedPassword)}
-	result := config.DB.Create(&user)
-
-	if result.Error != nil {
-		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "User already exists"})
+	user := models.User{Username: input.Username, Password: string(hashedPassword)}
+	if result := config.DB.Create(&user); result.Error != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create user"})
 	}
 
 	return c.JSON(fiber.Map{"message": "User registered successfully"})
 }
 
-// Login user and return JWT
 func Login(c *fiber.Ctx) error {
-	var loginData struct {
+	var input struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
 	}
 
-	if err := c.BodyParser(&loginData); err != nil {
+	if err := c.BodyParser(&input); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request"})
 	}
 
-	// Find user
 	var user models.User
-	result := config.DB.Where("username = ?", loginData.Username).First(&user)
-	if result.Error != nil {
+	if result := config.DB.Where("username = ?", input.Username).First(&user); result.Error != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid credentials"})
 	}
 
-	// Check password
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginData.Password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)); err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid credentials"})
 	}
 
-	// Generate JWT token
 	token, err := services.GenerateJWT(user.Username)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not generate token"})
@@ -68,3 +67,36 @@ func Login(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{"message": "Login successful", "token": token})
 }
+
+func GetUserProfile(c *fiber.Ctx) error {
+	username := c.Params("username")
+
+	var user models.User
+	if result := config.DB.Where("username = ?", username).First(&user); result.Error != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
+	}
+
+	return c.JSON(fiber.Map{"username": user.Username})
+}
+
+func GetCurrentUser(c *fiber.Ctx) error {
+	tokenString := c.Get("Authorization")
+	if tokenString == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Missing token"})
+	}
+
+	tokenString = tokenString[len("Bearer "):]
+
+	token, err := services.ParseJWT(tokenString)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid token"})
+	}
+
+	var user models.User
+	if result := config.DB.Where("username = ?", token.Username).First(&user); result.Error != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
+	}
+
+	return c.JSON(fiber.Map{"username": user.Username, "avatar": user.Avatar})
+}
+
