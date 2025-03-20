@@ -5,6 +5,7 @@ import (
 	"decentralized-plenum/middleware"
 	"decentralized-plenum/services"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 
@@ -13,78 +14,80 @@ import (
 )
 
 func SetupRoutes(app *fiber.App, server *socketio.Server) {
-	fmt.Println("🔧 Setting up routes...")
+    fmt.Println("🔧 Setting up routes...")
 
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{"message": "Decentralized Plenum API is running"})
-	})
+    app.Get("/", func(c *fiber.Ctx) error {
+        return c.JSON(fiber.Map{"message": "Decentralized Plenum API is running"})
+    })
 
-	auth := app.Group("/auth")
-	auth.Post("/register", controllers.Register)
-	auth.Post("/login", controllers.Login)
-	auth.Get("/profile/:username", controllers.GetUserProfile)
-	auth.Get("/me", controllers.GetCurrentUser)
-	
-	fmt.Println("✅ Auth routes registered: /auth/register, /auth/login, /auth/profile/:username")
+    auth := app.Group("/auth")
+    auth.Post("/register", controllers.Register)
+    auth.Post("/login", controllers.Login)
+    auth.Get("/profile/:username", controllers.GetUserProfile)
+    auth.Get("/me", controllers.GetCurrentUser)
 
-	uploadDir := "./uploads/avatars"
-	if err := os.MkdirAll(uploadDir, os.ModePerm); err != nil {
-		panic("Failed to create upload directory")
-	}
+    fmt.Println("✅ Auth routes registered: /auth/register, /auth/login, /auth/profile/:username")
 
-	app.Static("/uploads/avatars", uploadDir)
+    uploadDir := "./uploads/avatars"
+    if err := os.MkdirAll(uploadDir, os.ModePerm); err != nil {
+        panic("Failed to create upload directory")
+    }
 
-	api := app.Group("/api", middleware.AuthMiddleware())
-	api.Get("/protected", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{"message": "This is a protected route"})
-	})
+    app.Static("/uploads/avatars", uploadDir)
 
-	app.Post("/create-room", func(c *fiber.Ctx) error {
-		var req struct {
-			RoomID string `json:"roomId"`
-		}
-		if err := c.BodyParser(&req); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
-		}
+    api := app.Group("/api", middleware.AuthMiddleware())
+    api.Get("/protected", func(c *fiber.Ctx) error {
+        return c.JSON(fiber.Map{"message": "This is a protected route"})
+    })
 
-		if req.RoomID == "" {
-			return c.Status(400).JSON(fiber.Map{"error": "Room ID is required"})
-		}
+    app.Post("/create-room", func(c *fiber.Ctx) error {
+        var req struct {
+            RoomID string `json:"roomId"`
+        }
+        if err := c.BodyParser(&req); err != nil {
+            return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+        }
 
-		message, status := services.CreateRoom(req.RoomID, server)
-		return c.Status(status).JSON(fiber.Map{"message": message})
-	})
+        if req.RoomID == "" {
+            return c.Status(400).JSON(fiber.Map{"error": "Room ID is required"})
+        }
 
-	app.Post("/close-room", func(c *fiber.Ctx) error {
-		var req struct {
-			RoomID string `json:"roomId"`
-		}
-		if err := c.BodyParser(&req); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
-		}
+        message, status := services.CreateRoom(req.RoomID, server)
+        return c.Status(status).JSON(fiber.Map{"message": message})
+    })
 
-		if req.RoomID == "" {
-			return c.Status(400).JSON(fiber.Map{"error": "Room ID is required"})
-		}
+    app.Post("/close-room", func(c *fiber.Ctx) error {
+        var req struct {
+            RoomID string `json:"roomId"`
+        }
+        if err := c.BodyParser(&req); err != nil {
+            return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+        }
 
-		message, status := services.CloseRoom(req.RoomID, server)
-		return c.Status(status).JSON(fiber.Map{"message": message})
-	})
+        if req.RoomID == "" {
+            return c.Status(400).JSON(fiber.Map{"error": "Room ID is required"})
+        }
 
-	go func() {
-		httpServer := &http.Server{
-			Addr:    ":3002",
-			Handler: server,
-		}
-		fmt.Println("🚀 WebSocket server running on port 3002")
-		if err := httpServer.ListenAndServe(); err != nil {
-			fmt.Println("❌ WebSocket server error:", err)
-		}
-	}()
+        message, status := services.CloseRoom(req.RoomID, server)
+        return c.Status(status).JSON(fiber.Map{"message": message})
+    })
 
-	for _, route := range app.Stack() {
-		for _, routeItem := range route {
-			fmt.Println("📌 Registered Route:", routeItem.Method, routeItem.Path)
-		}
-	}
+    go func() {
+        if err := server.Serve(); err != nil {
+            log.Fatalf("⚠️ Socket.io server failed: %v", err)
+        }
+    }()
+    defer server.Close()
+
+    http.Handle("/socket.io/", server)
+    log.Printf("✅ WebSocket server running on port 3002")
+    if err := http.ListenAndServe(":3002", nil); err != nil {
+        log.Fatalf("❌ WebSocket server error: %v", err)
+    }
+
+    for _, route := range app.Stack() {
+        for _, routeItem := range route {
+            fmt.Println("📌 Registered Route:", routeItem.Method, routeItem.Path)
+        }
+    }
 }
