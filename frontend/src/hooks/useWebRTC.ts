@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
 
-const SIGNALING_SERVER =
-  process.env.NEXT_PUBLIC_SIGNALING_SERVER || "http://localhost:8080";
+const SIGNALING_SERVER = process.env.NEXT_PUBLIC_SIGNALING_SERVER;
 
 export function useWebRTC(roomId: string) {
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -68,7 +67,7 @@ export function useWebRTC(roomId: string) {
           }
         });
       } catch (error) {
-        console.error("❌ WebRTC initialization error:", error);
+        console.error("WebRTC initialization error:", error);
       }
     };
 
