@@ -122,22 +122,26 @@ export default function RoomPage() {
                 }}
               />
 
-              {/* Close Button */}
-              <button
-                onClick={() => sendSharedImage("")}
-                className="absolute top-2 right-2 bg-black bg-opacity-70 text-white px-3 py-1 rounded hover:bg-opacity-90"
-              >
-                ✖ Close
-              </button>
+              {/* Only uploader sees the close button */}
+              {localUserId === participants[0] && (
+                <button
+                  onClick={() => sendSharedImage("")}
+                  className="absolute top-2 right-2 bg-black bg-opacity-70 text-white px-3 py-1 rounded hover:bg-opacity-90"
+                >
+                  ✖ Close
+                </button>
+              )}
 
-              {/* Download Button */}
-              <a
-                href={sharedImageUrl}
-                download="shared-image.jpg"
-                className="absolute bottom-2 right-2 bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
-              >
-                ⬇ Download
-              </a>
+              {/* Everyone except uploader sees the download button */}
+              {localUserId !== participants[0] && (
+                <a
+                  href={sharedImageUrl}
+                  download="shared-image.jpg"
+                  className="absolute bottom-2 right-2 bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                >
+                  ⬇ Download
+                </a>
+              )}
             </div>
           </div>
         )}
