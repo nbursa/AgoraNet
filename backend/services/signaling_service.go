@@ -113,7 +113,6 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				break
 			}
 			client.RoomID = roomID
-			log.Printf("🚪 %s joining room %s", clientID, roomID)
 			registerClient(roomID, client)
 
 		case "offer", "answer", "ice-candidate":
@@ -126,8 +125,19 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			forwardMessage(targetID, msg)
 
 		case "leave":
-			log.Printf("👋 %s is leaving room", clientID)
 			removeClient(client)
+
+		case "share-image":
+			imageURL, ok := msg["imageUrl"].(string)
+			if !ok {
+				log.Printf("⚠️ Invalid share-image message from %s", clientID)
+				break
+			}
+			broadcastMessage(client.RoomID, map[string]interface{}{
+				"type":     "shared-image",
+				"userId":   clientID,
+				"imageUrl": imageURL,
+			})
 
 		default:
 			log.Printf("⚠️ Unknown message type from %s: %v", clientID, msg["type"])
@@ -136,42 +146,48 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 }
 
 func registerClient(roomID string, client *Client) {
-    roomLock.Lock()
-    defer roomLock.Unlock()
+	roomLock.Lock()
+	defer roomLock.Unlock()
 
-    if rooms[roomID] == nil {
-        rooms[roomID] = make(map[string]*Client)
-    }
+	if rooms[roomID] == nil {
+		rooms[roomID] = make(map[string]*Client)
+	}
 
-    rooms[roomID][client.ID] = client
+	rooms[roomID][client.ID] = client
 
-    userList := []string{}
-    for _, peer := range rooms[roomID] {
-        userList = append(userList, peer.ID)
-    }
+	userList := []string{}
+	for _, peer := range rooms[roomID] {
+		userList = append(userList, peer.ID)
+	}
 
-    for _, peer := range rooms[roomID] {
-        peer.Conn.WriteJSON(map[string]interface{}{
-            "type":  "participants",
-            "users": userList,
-        })
-    }
-
-    for _, peer := range rooms[roomID] {
-        if peer.ID != client.ID {
-            peer.Conn.WriteJSON(map[string]interface{}{
-                "type":   "user-joined",
-                "userId": client.ID,
-            })
-        }
-    }
+	for _, peer := range rooms[roomID] {
+		peer.Conn.WriteJSON(map[string]interface{}{
+			"type":  "participants",
+			"users": userList,
+		})
+	}
 }
 
 func forwardMessage(targetID string, msg map[string]interface{}) {
+	roomLock.Lock()
+	defer roomLock.Unlock()
+
 	if target, ok := clients[targetID]; ok {
 		err := target.Conn.WriteJSON(msg)
 		if err != nil {
-			log.Printf("❌ Failed to send to %s: %v", targetID, err)
+			log.Printf("❌ Failed to send message to %s: %v", targetID, err)
+		}
+	}
+}
+
+func broadcastMessage(roomID string, message map[string]interface{}) {
+	roomLock.Lock()
+	defer roomLock.Unlock()
+
+	for _, client := range rooms[roomID] {
+		err := client.Conn.WriteJSON(message)
+		if err != nil {
+			log.Printf("❌ Failed to broadcast to %s: %v", client.ID, err)
 		}
 	}
 }

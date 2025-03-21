@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 
 const SIGNALING_SERVER =
   process.env.NEXT_PUBLIC_SIGNALING_SERVER || "ws://localhost:8081/ws";
@@ -13,7 +14,9 @@ type SignalMessage =
   | { type: "offer"; userId: string; offer: RTCSessionDescriptionInit }
   | { type: "answer"; userId: string; answer: RTCSessionDescriptionInit }
   | { type: "ice-candidate"; userId: string; candidate: RTCIceCandidateInit }
-  | { type: "leave"; userId: string };
+  | { type: "leave"; userId: string }
+  | { type: "shared-image"; userId: string; imageUrl: string }
+  | { type: "share-image"; imageUrl: string };
 
 type RemoteStreamEntry = {
   id: string;
@@ -27,10 +30,16 @@ export function useWebRTC(roomId: string): {
   remoteStreams: RemoteStreamEntry[];
   leaveRoom: () => void;
   participants: string[];
+  sendSharedImage: (imageUrl: string) => void;
+  sharedImageUrl: string | null;
+  localUserId: string | null;
 } {
+  const router = useRouter();
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [remoteStreams, setRemoteStreams] = useState<RemoteStreamEntry[]>([]);
   const [participants, setParticipants] = useState<string[]>([]);
+  const [sharedImageUrl, setSharedImageUrl] = useState<string | null>(null);
+  const [localUserId, setLocalUserId] = useState<string | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
   const peersRef = useRef<{ [id: string]: RTCPeerConnection }>({});
   const userIdRef = useRef<string | null>(null);
@@ -43,6 +52,13 @@ export function useWebRTC(roomId: string): {
       console.warn("❌ WebSocket not open. Skipped:", msg);
     }
   }, []);
+
+  const sendSharedImage = useCallback(
+    (imageUrl: string) => {
+      send({ type: "share-image", imageUrl });
+    },
+    [send]
+  );
 
   const createPeer = useCallback(
     (userId: string, initiator: boolean): RTCPeerConnection => {
@@ -106,6 +122,7 @@ export function useWebRTC(roomId: string): {
     peersRef.current = {};
     setRemoteStreams([]);
     setParticipants([]);
+    setSharedImageUrl(null);
 
     if (socketRef.current) {
       socketRef.current.close();
@@ -114,7 +131,10 @@ export function useWebRTC(roomId: string): {
 
     isJoiningRef.current = false;
     userIdRef.current = null;
-  }, [send]);
+    setLocalUserId(null);
+
+    router.push("/rooms");
+  }, [send, router]);
 
   useEffect(() => {
     if (wasInitialized) return;
@@ -145,14 +165,9 @@ export function useWebRTC(roomId: string): {
           switch (message.type) {
             case "init":
               userIdRef.current = message.userId;
+              setLocalUserId(message.userId);
               isJoiningRef.current = true;
               send({ type: "join", roomId });
-
-              window.dispatchEvent(
-                new CustomEvent("plenum-user-id", {
-                  detail: { userId: message.userId },
-                })
-              );
               break;
 
             case "participants":
@@ -163,6 +178,10 @@ export function useWebRTC(roomId: string): {
               if (message.userId !== userIdRef.current) {
                 createPeer(message.userId, true);
               }
+              break;
+
+            case "shared-image":
+              setSharedImageUrl(message.imageUrl);
               break;
 
             case "offer": {
@@ -222,5 +241,13 @@ export function useWebRTC(roomId: string): {
     };
   }, [roomId, createPeer, leaveRoom, send]);
 
-  return { stream, remoteStreams, leaveRoom, participants };
+  return {
+    stream,
+    remoteStreams,
+    leaveRoom,
+    participants,
+    sendSharedImage,
+    sharedImageUrl,
+    localUserId,
+  };
 }

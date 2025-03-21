@@ -1,45 +1,41 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useWebRTC } from "@/hooks/useWebRTC";
-
-type RemoteStreamEntry = {
-  id: string;
-  stream: MediaStream;
-};
-
-type WebRTCResponse = {
-  stream: MediaStream | null;
-  remoteStreams: RemoteStreamEntry[];
-  leaveRoom: () => void;
-  participants: string[];
-};
 
 export default function RoomPage() {
   const { id } = useParams();
   const router = useRouter();
 
-  const { stream, remoteStreams, leaveRoom, participants }: WebRTCResponse =
-    useWebRTC(id as string);
+  const {
+    stream,
+    remoteStreams,
+    leaveRoom,
+    participants,
+    sendSharedImage,
+    sharedImageUrl,
+    localUserId,
+  } = useWebRTC(id as string);
 
-  const [localUserId, setLocalUserId] = useState<string | null>(null);
-  const localAudioRef = useRef<HTMLAudioElement>(null);
+  const localAudioRef = useRef<HTMLAudioElement | null>(null);
   const remoteAudioRefs = useRef<
-    Record<string, React.RefObject<HTMLAudioElement>>
+    Record<string, React.RefObject<HTMLAudioElement | null>>
   >({});
 
+  // Ensure local audio plays correctly
   useEffect(() => {
     if (localAudioRef.current && stream) {
       localAudioRef.current.srcObject = stream;
     }
   }, [stream]);
 
+  // Ensure remote audio plays correctly
   useEffect(() => {
     remoteStreams.forEach((entry) => {
       if (!remoteAudioRefs.current[entry.id]) {
-        remoteAudioRefs.current[entry.id] =
-          React.createRef() as React.RefObject<HTMLAudioElement>;
+        remoteAudioRefs.current[entry.id] = React.createRef();
       }
       const ref = remoteAudioRefs.current[entry.id];
       if (ref?.current) {
@@ -48,62 +44,81 @@ export default function RoomPage() {
     });
   }, [remoteStreams]);
 
-  useEffect(() => {
-    const handleUserId = (e: CustomEvent<{ userId: string }>) => {
-      if (e.detail?.userId) setLocalUserId(e.detail.userId);
-    };
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-    window.addEventListener("plenum-user-id", handleUserId as EventListener);
-    return () => {
-      window.removeEventListener(
-        "plenum-user-id",
-        handleUserId as EventListener
-      );
-    };
-  }, []);
+    // Convert file to object URL and send
+    const url = URL.createObjectURL(file);
+    sendSharedImage(url);
+  };
 
-  const handleLeave = () => {
+  const handleLeaveRoom = () => {
     leaveRoom();
     router.push("/rooms");
   };
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/rooms/${id}`);
-  };
-
   return (
     <div className="flex flex-row h-screen w-full">
+      {/* Sidebar */}
       <div className="w-64 bg-gray-900 text-white p-4 border-r border-gray-700 overflow-y-auto min-h-screen flex flex-col">
         <h2 className="text-xl font-semibold mb-4">🧑‍🤝‍🧑 Participants</h2>
         <ul className="space-y-2 text-sm font-mono flex-grow">
-          {participants.map((uid) => (
+          {participants.map((uid, index) => (
             <li
               key={uid}
               className={uid === localUserId ? "text-green-400" : "text-white"}
             >
-              {uid === localUserId ? `🟢 You (${uid})` : `🔉 ${uid}`}
+              {uid === localUserId
+                ? `🟢 You (${uid})`
+                : index === 0
+                ? `👑 Host (${uid})`
+                : `🔉 Guest (${uid})`}
             </li>
           ))}
         </ul>
-
-        {localUserId && localUserId === participants[0] && (
-          <button
-            onClick={handleCopy}
-            className="mt-auto w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 text-sm"
-          >
-            Copy Room Link
-          </button>
-        )}
       </div>
 
+      {/* Main Content */}
       <div className="flex-1 flex flex-col justify-center items-center p-6 min-h-screen">
         <h1 className="text-2xl font-bold mb-4">Room {id}</h1>
 
+        {/* Local Audio */}
         <div className="mb-6 text-center">
           <h2 className="text-lg font-semibold">🎙️ Your Microphone</h2>
           <audio autoPlay controls ref={localAudioRef} className="mt-2" />
         </div>
 
+        {/* File Upload */}
+        <div className="mb-6 text-center">
+          <h2 className="text-lg font-semibold">📤 Share Image</h2>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="mt-2"
+          />
+        </div>
+
+        {/* Shared Image Preview */}
+        {sharedImageUrl && (
+          <div className="mb-6 text-center">
+            <h2 className="text-lg font-semibold">🖼️ Shared Image</h2>
+            <Image
+              src={sharedImageUrl}
+              alt="Shared content"
+              width={640}
+              height={480}
+              unoptimized
+              className="w-auto h-auto max-w-full max-h-96 object-contain"
+              onError={(e) => {
+                console.error("Image failed to load:", e);
+              }}
+            />
+          </div>
+        )}
+
+        {/* Hidden Remote Audio Players */}
         {remoteStreams.map((entry) => (
           <audio
             key={entry.id}
@@ -114,7 +129,7 @@ export default function RoomPage() {
         ))}
 
         <button
-          onClick={handleLeave}
+          onClick={handleLeaveRoom}
           className="mt-10 bg-red-600 text-white px-6 py-2 w-48 rounded-md hover:bg-red-700"
         >
           Leave Room
