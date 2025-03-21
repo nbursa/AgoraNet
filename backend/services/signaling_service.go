@@ -127,16 +127,18 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		case "leave":
 			removeClient(client)
 
-		case "share-image":
-			imageURL, ok := msg["imageUrl"].(string)
-			if !ok {
-				log.Printf("⚠️ Invalid share-image message from %s", clientID)
+		case "share-media":
+			url, ok := msg["url"].(string)
+			mediaType, okType := msg["mediaType"].(string)
+			if !ok || !okType {
+				log.Printf("⚠️ Invalid share-media from %s", clientID)
 				break
 			}
 			broadcastMessage(client.RoomID, map[string]interface{}{
-				"type":     "shared-image",
-				"userId":   clientID,
-				"imageUrl": imageURL,
+				"type":      "shared-media",
+				"userId":    clientID,
+				"url":       url,
+				"mediaType": mediaType,
 			})
 
 		default:

@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 const SIGNALING_SERVER =
   process.env.NEXT_PUBLIC_SIGNALING_SERVER || "ws://localhost:8081/ws";
 
+type SharedMediaType = "image" | "pdf";
+
 type SignalMessage =
   | { type: "join"; roomId: string }
   | { type: "init"; userId: string }
@@ -15,8 +17,17 @@ type SignalMessage =
   | { type: "answer"; userId: string; answer: RTCSessionDescriptionInit }
   | { type: "ice-candidate"; userId: string; candidate: RTCIceCandidateInit }
   | { type: "leave"; userId: string }
-  | { type: "shared-image"; userId: string; imageUrl: string }
-  | { type: "share-image"; imageUrl: string };
+  | {
+      type: "shared-media";
+      userId: string;
+      url: string;
+      mediaType: SharedMediaType;
+    }
+  | {
+      type: "share-media";
+      url: string;
+      mediaType: SharedMediaType;
+    };
 
 type RemoteStreamEntry = {
   id: string;
@@ -30,15 +41,18 @@ export function useWebRTC(roomId: string): {
   remoteStreams: RemoteStreamEntry[];
   leaveRoom: () => void;
   participants: string[];
-  sendSharedImage: (imageUrl: string) => void;
-  sharedImageUrl: string | null;
+  sendSharedMedia: (url: string | null, mediaType?: SharedMediaType) => void;
+  sharedMediaUrl: string | null;
+  sharedMediaType: SharedMediaType | null;
   localUserId: string | null;
 } {
   const router = useRouter();
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [remoteStreams, setRemoteStreams] = useState<RemoteStreamEntry[]>([]);
   const [participants, setParticipants] = useState<string[]>([]);
-  const [sharedImageUrl, setSharedImageUrl] = useState<string | null>(null);
+  const [sharedMediaUrl, setSharedMediaUrl] = useState<string | null>(null);
+  const [sharedMediaType, setSharedMediaType] =
+    useState<SharedMediaType | null>(null);
   const [localUserId, setLocalUserId] = useState<string | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
   const peersRef = useRef<{ [id: string]: RTCPeerConnection }>({});
@@ -53,15 +67,13 @@ export function useWebRTC(roomId: string): {
     }
   }, []);
 
-  // const sendSharedImage = useCallback(
-  //   (imageUrl: string) => {
-  //     send({ type: "share-image", imageUrl });
-  //   },
-  //   [send]
-  // );
-  const sendSharedImage = useCallback(
-    (imageUrl: string | null) => {
-      send({ type: "share-image", imageUrl: imageUrl || "" });
+  const sendSharedMedia = useCallback(
+    (url: string | null, mediaType: SharedMediaType = "image") => {
+      send({
+        type: "share-media",
+        url: url || "",
+        mediaType,
+      });
     },
     [send]
   );
@@ -128,7 +140,8 @@ export function useWebRTC(roomId: string): {
     peersRef.current = {};
     setRemoteStreams([]);
     setParticipants([]);
-    setSharedImageUrl(null);
+    setSharedMediaUrl(null);
+    setSharedMediaType(null);
 
     if (socketRef.current) {
       socketRef.current.close();
@@ -186,8 +199,9 @@ export function useWebRTC(roomId: string): {
               }
               break;
 
-            case "shared-image":
-              setSharedImageUrl(message.imageUrl || null);
+            case "shared-media":
+              setSharedMediaUrl(message.url || null);
+              setSharedMediaType(message.mediaType);
               break;
 
             case "offer": {
@@ -252,8 +266,9 @@ export function useWebRTC(roomId: string): {
     remoteStreams,
     leaveRoom,
     participants,
-    sendSharedImage,
-    sharedImageUrl,
+    sendSharedMedia,
+    sharedMediaUrl,
+    sharedMediaType,
     localUserId,
   };
 }
