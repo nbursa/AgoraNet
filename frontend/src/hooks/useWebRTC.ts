@@ -19,14 +19,15 @@ type RemoteStreamEntry = {
   stream: MediaStream;
 };
 
+let wasInitialized = false;
+
 export function useWebRTC(roomId: string) {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [remoteStreams, setRemoteStreams] = useState<RemoteStreamEntry[]>([]);
   const socketRef = useRef<WebSocket | null>(null);
   const peersRef = useRef<{ [id: string]: RTCPeerConnection }>({});
   const userIdRef = useRef<string | null>(null);
-  const hasLeft = useRef(false);
-  const isConnecting = useRef(false);
+  const isJoiningRef = useRef(false);
 
   const send = useCallback((msg: SignalMessage) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) {
@@ -38,12 +39,13 @@ export function useWebRTC(roomId: string) {
 
   const createPeer = useCallback(
     (userId: string, initiator: boolean): RTCPeerConnection => {
-      if (peersRef.current[userId]) return peersRef.current[userId];
+      const existing = peersRef.current[userId];
+      if (existing) return existing;
 
       const peer = new RTCPeerConnection();
 
       stream?.getTracks().forEach((track) => {
-        peer.addTrack(track, stream!);
+        peer.addTrack(track, stream);
       });
 
       peer.onicecandidate = (event) => {
@@ -60,10 +62,8 @@ export function useWebRTC(roomId: string) {
         const remoteStream = event.streams[0];
         if (remoteStream) {
           setRemoteStreams((prev) => {
-            const alreadyExists = prev.some(
-              (s) => s.stream.id === remoteStream.id
-            );
-            if (alreadyExists) return prev;
+            const exists = prev.find((s) => s.stream.id === remoteStream.id);
+            if (exists) return prev;
             return [...prev, { id: userId, stream: remoteStream }];
           });
         }
@@ -88,46 +88,62 @@ export function useWebRTC(roomId: string) {
   );
 
   const leaveRoom = useCallback(() => {
-    if (hasLeft.current) return;
-    hasLeft.current = true;
+    if (!isJoiningRef.current || !userIdRef.current) {
+      console.log("⛔ Skipping leaveRoom — not fully joined.");
+      return;
+    }
 
-    send({ type: "leave", userId: userIdRef.current || "self" });
-    setTimeout(() => socketRef.current?.close(), 100);
+    console.log("👋 Leaving room...");
+    send({ type: "leave", userId: userIdRef.current });
 
     Object.values(peersRef.current).forEach((peer) => peer.close());
     peersRef.current = {};
     setRemoteStreams([]);
+
+    if (socketRef.current) {
+      socketRef.current.close();
+      socketRef.current = null;
+    }
+
+    isJoiningRef.current = false;
+    userIdRef.current = null;
   }, [send]);
 
   useEffect(() => {
-    let cancelled = false;
-    hasLeft.current = false;
+    if (wasInitialized) {
+      console.log("🟡 Skipping init — already initialized.");
+      return;
+    }
 
-    if (socketRef.current || isConnecting.current) return;
-    isConnecting.current = true;
+    wasInitialized = true;
+    isJoiningRef.current = false;
+    peersRef.current = {};
+    setRemoteStreams([]);
 
-    const tryConnect = async () => {
+    const connect = async () => {
       try {
         const localStream = await navigator.mediaDevices.getUserMedia({
           audio: true,
         });
-        if (cancelled) return;
         setStream(localStream);
         console.log("🎙️ Got local audio stream");
 
-        socketRef.current = new WebSocket(SIGNALING_SERVER);
+        const socket = new WebSocket(SIGNALING_SERVER);
+        socketRef.current = socket;
 
-        socketRef.current.onopen = () => {
+        socket.onopen = () => {
           console.log("✅ Connected to signaling server");
         };
 
-        socketRef.current.onmessage = async (event) => {
+        socket.onmessage = async (event) => {
           const message: SignalMessage = JSON.parse(event.data);
           console.log("📨 Message:", message);
 
           switch (message.type) {
             case "init":
               userIdRef.current = message.userId;
+              isJoiningRef.current = true;
+              console.log("🆔 Got user ID:", message.userId);
               send({ type: "join", roomId });
               break;
 
@@ -137,75 +153,76 @@ export function useWebRTC(roomId: string) {
               }
               break;
 
-            case "offer": {
-              const peer = createPeer(message.userId, false);
-              await peer.setRemoteDescription(
-                new RTCSessionDescription(message.offer)
-              );
-              const answer = await peer.createAnswer();
-              await peer.setLocalDescription(answer);
-              send({ type: "answer", userId: message.userId, answer });
-              break;
-            }
-
-            case "answer": {
-              const peer = peersRef.current[message.userId];
-              if (peer) {
-                console.log("🤝 Answer from", message.userId);
+            case "offer":
+              {
+                const peer = createPeer(message.userId, false);
                 await peer.setRemoteDescription(
-                  new RTCSessionDescription(message.answer)
+                  new RTCSessionDescription(message.offer)
                 );
+                const answer = await peer.createAnswer();
+                await peer.setLocalDescription(answer);
+                send({ type: "answer", userId: message.userId, answer });
               }
               break;
-            }
 
-            case "ice-candidate": {
-              const peer = peersRef.current[message.userId];
-              if (peer && message.candidate) {
-                try {
-                  await peer.addIceCandidate(
-                    new RTCIceCandidate(message.candidate)
+            case "answer":
+              {
+                const peer = peersRef.current[message.userId];
+                if (peer) {
+                  await peer.setRemoteDescription(
+                    new RTCSessionDescription(message.answer)
                   );
-                } catch (e) {
-                  console.warn("❌ Failed to add ICE candidate", e);
                 }
               }
               break;
-            }
 
-            case "leave": {
-              const peer = peersRef.current[message.userId];
-              if (peer) peer.close();
-              delete peersRef.current[message.userId];
-              setRemoteStreams((prev) =>
-                prev.filter((s) => s.id !== message.userId)
-              );
-              console.log(`👋 Peer ${message.userId} left`);
+            case "ice-candidate":
+              {
+                const peer = peersRef.current[message.userId];
+                if (peer) {
+                  try {
+                    await peer.addIceCandidate(
+                      new RTCIceCandidate(message.candidate)
+                    );
+                  } catch (err) {
+                    console.warn("❌ Failed to add ICE candidate:", err);
+                  }
+                }
+              }
               break;
-            }
+
+            case "leave":
+              {
+                const peer = peersRef.current[message.userId];
+                if (peer) peer.close();
+                delete peersRef.current[message.userId];
+                setRemoteStreams((prev) =>
+                  prev.filter((s) => s.id !== message.userId)
+                );
+                console.log(`👋 Peer ${message.userId} left`);
+              }
+              break;
           }
         };
 
-        socketRef.current.onerror = (e) => {
-          console.error("WebSocket error:", e);
+        socket.onclose = () => {
+          console.warn("🔌 WebSocket closed");
+          socketRef.current = null;
         };
 
-        socketRef.current.onclose = () => {
-          console.warn("🔌 WebSocket closed");
-          isConnecting.current = false;
+        socket.onerror = (e) => {
+          console.error("WebSocket error:", e);
         };
       } catch (err) {
-        console.error("❌ Error in tryConnect:", err);
-        isConnecting.current = false;
+        console.error("❌ Failed to connect:", err);
       }
     };
 
-    tryConnect();
+    connect();
 
     return () => {
-      cancelled = true;
+      console.log("🧹 Cleanup triggered");
       leaveRoom();
-      isConnecting.current = false;
     };
   }, [roomId, createPeer, leaveRoom, send]);
 
