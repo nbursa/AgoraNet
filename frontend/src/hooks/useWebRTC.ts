@@ -122,108 +122,112 @@ export function useWebRTC(roomId: string) {
 
     const connect = async () => {
       try {
-        const localStream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-        });
-        setStream(localStream);
-        console.log("🎙️ Got local audio stream");
+        if (typeof navigator !== "undefined" && navigator.mediaDevices) {
+          const localStream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+          });
+          setStream(localStream);
+          console.log("🎙️ Got local audio stream");
 
-        const socket = new WebSocket(SIGNALING_SERVER);
-        socketRef.current = socket;
+          const socket = new WebSocket(SIGNALING_SERVER);
+          socketRef.current = socket;
 
-        socket.onopen = () => {
-          console.log("✅ Connected to signaling server");
-        };
+          socket.onopen = () => {
+            console.log("✅ Connected to signaling server");
+          };
 
-        socket.onmessage = async (event) => {
-          const message: SignalMessage = JSON.parse(event.data);
-          console.log("📨 Message:", message);
+          socket.onmessage = async (event) => {
+            const message: SignalMessage = JSON.parse(event.data);
+            console.log("📨 Message:", message);
 
-          switch (message.type) {
-            case "init":
-              userIdRef.current = message.userId;
-              isJoiningRef.current = true;
-              console.log("🆔 Got user ID:", message.userId);
-              send({ type: "join", roomId });
+            switch (message.type) {
+              case "init":
+                userIdRef.current = message.userId;
+                isJoiningRef.current = true;
+                console.log("🆔 Got user ID:", message.userId);
+                send({ type: "join", roomId });
 
-              window.dispatchEvent(
-                new CustomEvent("plenum-user-id", {
-                  detail: { userId: message.userId },
-                })
-              );
-              break;
-
-            case "user-joined":
-              if (message.userId !== userIdRef.current) {
-                createPeer(message.userId, true);
-              }
-              break;
-
-            case "offer":
-              {
-                const peer = createPeer(message.userId, false);
-                await peer.setRemoteDescription(
-                  new RTCSessionDescription(message.offer)
+                window.dispatchEvent(
+                  new CustomEvent("plenum-user-id", {
+                    detail: { userId: message.userId },
+                  })
                 );
-                const answer = await peer.createAnswer();
-                await peer.setLocalDescription(answer);
-                send({ type: "answer", userId: message.userId, answer });
-              }
-              break;
+                break;
 
-            case "answer":
-              {
-                const peer = peersRef.current[message.userId];
-                if (peer && peer.signalingState === "have-local-offer") {
-                  await peer.setRemoteDescription(
-                    new RTCSessionDescription(message.answer)
-                  );
-                } else {
-                  console.warn(
-                    `⚠️ Skipping setRemoteDescription(answer) for ${message.userId} — signalingState:`,
-                    peer?.signalingState
-                  );
+              case "user-joined":
+                if (message.userId !== userIdRef.current) {
+                  createPeer(message.userId, true);
                 }
-              }
-              break;
+                break;
 
-            case "ice-candidate":
-              {
-                const peer = peersRef.current[message.userId];
-                if (peer) {
-                  try {
-                    await peer.addIceCandidate(
-                      new RTCIceCandidate(message.candidate)
+              case "offer":
+                {
+                  const peer = createPeer(message.userId, false);
+                  await peer.setRemoteDescription(
+                    new RTCSessionDescription(message.offer)
+                  );
+                  const answer = await peer.createAnswer();
+                  await peer.setLocalDescription(answer);
+                  send({ type: "answer", userId: message.userId, answer });
+                }
+                break;
+
+              case "answer":
+                {
+                  const peer = peersRef.current[message.userId];
+                  if (peer && peer.signalingState === "have-local-offer") {
+                    await peer.setRemoteDescription(
+                      new RTCSessionDescription(message.answer)
                     );
-                  } catch (err) {
-                    console.warn("❌ Failed to add ICE candidate:", err);
+                  } else {
+                    console.warn(
+                      `⚠️ Skipping setRemoteDescription(answer) for ${message.userId} — signalingState:`,
+                      peer?.signalingState
+                    );
                   }
                 }
-              }
-              break;
+                break;
 
-            case "leave":
-              {
-                const peer = peersRef.current[message.userId];
-                if (peer) peer.close();
-                delete peersRef.current[message.userId];
-                setRemoteStreams((prev) =>
-                  prev.filter((s) => s.id !== message.userId)
-                );
-                console.log(`👋 Peer ${message.userId} left`);
-              }
-              break;
-          }
-        };
+              case "ice-candidate":
+                {
+                  const peer = peersRef.current[message.userId];
+                  if (peer) {
+                    try {
+                      await peer.addIceCandidate(
+                        new RTCIceCandidate(message.candidate)
+                      );
+                    } catch (err) {
+                      console.warn("❌ Failed to add ICE candidate:", err);
+                    }
+                  }
+                }
+                break;
 
-        socket.onclose = () => {
-          console.warn("🔌 WebSocket closed");
-          socketRef.current = null;
-        };
+              case "leave":
+                {
+                  const peer = peersRef.current[message.userId];
+                  if (peer) peer.close();
+                  delete peersRef.current[message.userId];
+                  setRemoteStreams((prev) =>
+                    prev.filter((s) => s.id !== message.userId)
+                  );
+                  console.log(`👋 Peer ${message.userId} left`);
+                }
+                break;
+            }
+          };
 
-        socket.onerror = (e) => {
-          console.error("WebSocket error:", e);
-        };
+          socket.onclose = () => {
+            console.warn("🔌 WebSocket closed");
+            socketRef.current = null;
+          };
+
+          socket.onerror = (e) => {
+            console.error("WebSocket error:", e);
+          };
+        } else {
+          console.error("❌ MediaDevices not available.");
+        }
       } catch (err) {
         console.error("❌ Failed to connect:", err);
       }

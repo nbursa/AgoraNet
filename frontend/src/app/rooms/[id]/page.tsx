@@ -12,37 +12,28 @@ export default function RoomPage() {
   const [localUserId, setLocalUserId] = useState<string | null>(null);
 
   const localAudioRef = useRef<HTMLAudioElement | null>(null);
-  const [remoteAudioRefs, setRemoteAudioRefs] = useState<{
-    [id: string]: React.RefObject<HTMLAudioElement | null>;
-  }>({});
 
+  // Ref to store remote audio elements dynamically
+  const remoteAudioRefs = useRef<{ [id: string]: HTMLAudioElement | null }>({});
+
+  // Set local audio stream
   useEffect(() => {
     if (localAudioRef.current && stream) {
       localAudioRef.current.srcObject = stream;
     }
   }, [stream]);
 
+  // Set remote audio streams for each peer
   useEffect(() => {
-    setRemoteAudioRefs((prevRefs) => {
-      const newRefs = { ...prevRefs };
-      remoteStreams.forEach((entry) => {
-        if (!newRefs[entry.id]) {
-          newRefs[entry.id] = React.createRef<HTMLAudioElement>();
-        }
-      });
-      return newRefs;
+    remoteStreams.forEach((entry) => {
+      const ref = remoteAudioRefs.current[entry.id];
+      if (ref && entry.stream) {
+        ref.srcObject = entry.stream; // Assign the stream to the audio element
+      }
     });
   }, [remoteStreams]);
 
-  useEffect(() => {
-    remoteStreams.forEach((entry) => {
-      const ref = remoteAudioRefs[entry.id];
-      if (ref?.current) {
-        ref.current.srcObject = entry.stream;
-      }
-    });
-  }, [remoteStreams, remoteAudioRefs]);
-
+  // Listen for local user ID
   useEffect(() => {
     const handleUserId = (e: CustomEvent<{ userId: string }>) => {
       if (e.detail?.userId) setLocalUserId(e.detail.userId);
@@ -86,7 +77,9 @@ export default function RoomPage() {
             <audio
               autoPlay
               controls
-              ref={remoteAudioRefs[entry.id]}
+              ref={(el) => {
+                if (el) remoteAudioRefs.current[entry.id] = el; // Assign remote audio element ref
+              }}
               className="w-full"
             />
           </div>
