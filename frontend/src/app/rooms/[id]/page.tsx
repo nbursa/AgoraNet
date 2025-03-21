@@ -89,8 +89,6 @@ export default function RoomPage() {
     <div className="flex flex-row w-full h-full overflow-hidden">
       {/* Sidebar */}
       <aside className="w-64 h-full bg-gray-900 text-white p-4 border-r border-gray-700 flex flex-col">
-        <h2 className="text-xl font-semibold mb-4">🧑‍🤝‍🧑 Participants</h2>
-
         <button
           onClick={handleCopyRoomUrl}
           className="mb-4 w-full bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm"
