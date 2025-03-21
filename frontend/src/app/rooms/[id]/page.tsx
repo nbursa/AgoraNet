@@ -74,6 +74,10 @@ export default function RoomPage() {
     router.push("/rooms");
   };
 
+  const triggerFileSelect = () => {
+    fileInputRef.current?.click();
+  };
+
   return (
     <div className="flex flex-row h-screen w-full">
       {/* Sidebar */}
@@ -105,15 +109,21 @@ export default function RoomPage() {
           <audio autoPlay controls ref={localAudioRef} className="mt-2" />
         </div>
 
-        {/* Upload */}
+        {/* Upload Button */}
         <div className="mb-6 text-center">
-          <h2 className="text-lg font-semibold">📤 Share Visual Document</h2>
+          <h2 className="text-lg font-semibold mb-2">📤 Share Document</h2>
+          <button
+            onClick={triggerFileSelect}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            📁 Choose File
+          </button>
           <input
             ref={fileInputRef}
             type="file"
             accept="image/*,.pdf"
             onChange={handleFileChange}
-            className="mt-2"
+            className="hidden"
           />
         </div>
 
