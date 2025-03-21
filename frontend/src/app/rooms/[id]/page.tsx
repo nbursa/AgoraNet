@@ -86,12 +86,11 @@ export default function RoomPage() {
   };
 
   return (
-    <div className="flex flex-row h-screen w-full">
+    <div className="flex flex-row w-full h-full overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-64 bg-gray-900 text-white p-4 border-r border-gray-700 overflow-y-auto min-h-screen">
+      <aside className="w-64 bg-gray-900 text-white p-4 border-r border-gray-700 overflow-y-auto">
         <h2 className="text-xl font-semibold mb-4">🧑‍🤝‍🧑 Participants</h2>
 
-        {/* Copy URL Button */}
         <button
           onClick={handleCopyRoomUrl}
           className="mb-4 w-full bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm"
@@ -116,104 +115,104 @@ export default function RoomPage() {
       </aside>
 
       {/* Main Area */}
-      <main className="flex-1 flex flex-col justify-center items-center p-6 min-h-screen">
-        <h1 className="text-2xl font-bold mb-4">Room {id}</h1>
+      <main className="flex-1 overflow-y-auto">
+        <div className="flex flex-col items-center justify-center min-h-full py-10 px-6">
+          <h1 className="text-2xl font-bold mb-6">Room {id}</h1>
 
-        {/* Local Audio */}
-        <div className="mb-6 text-center">
-          <h2 className="text-lg font-semibold">🎙️ Your Microphone</h2>
-          <audio autoPlay controls ref={localAudioRef} className="mt-2" />
-        </div>
-
-        {/* Upload Button */}
-        <div className="mb-6 text-center">
-          <h2 className="text-lg font-semibold mb-2">📤 Share Document</h2>
-          <button
-            onClick={triggerFileSelect}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            📁 Choose File
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*,.pdf"
-            onChange={handleFileChange}
-            className="hidden"
-          />
-        </div>
-
-        {/* Preview */}
-        {sharedMediaUrl && sharedMediaType && (
-          <div className="mb-6 text-center relative">
-            <h2 className="text-lg font-semibold">📎 Shared Preview</h2>
-            <div className="relative inline-block">
-              {sharedMediaType === "pdf" ? (
-                <iframe
-                  src={sharedMediaUrl}
-                  width="640"
-                  height="480"
-                  className="border max-w-full max-h-96"
-                />
-              ) : (
-                <Image
-                  src={sharedMediaUrl}
-                  alt="Shared"
-                  width={640}
-                  height={480}
-                  unoptimized
-                  className="w-auto h-auto max-w-full max-h-96 object-contain"
-                />
-              )}
-
-              {/* Close */}
-              {localUserId === participants[0] && (
-                <button
-                  onClick={handleClearMedia}
-                  className="absolute top-2 right-2 bg-black bg-opacity-70 text-white px-3 py-1 rounded hover:bg-opacity-90"
-                >
-                  ✖ Close
-                </button>
-              )}
-
-              {/* Download */}
-              <a
-                href={sharedMediaUrl}
-                download={`shared-content.${
-                  sharedMediaType === "pdf" ? "pdf" : "jpg"
-                }`}
-                className="absolute bottom-2 right-2 bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
-              >
-                ⬇ Download
-              </a>
-            </div>
+          {/* Local Audio */}
+          <div className="mb-6 text-center">
+            <h2 className="text-lg font-semibold">🎙️ Your Microphone</h2>
+            <audio autoPlay controls ref={localAudioRef} className="mt-2" />
           </div>
-        )}
 
-        {/* Remote Audios */}
-        {remoteStreams.map((entry) => {
-          if (!remoteAudioRefs.current[entry.id]) {
-            remoteAudioRefs.current[entry.id] =
-              React.createRef<HTMLAudioElement>();
-          }
-
-          return (
-            <audio
-              key={entry.id}
-              autoPlay
-              ref={remoteAudioRefs.current[entry.id]}
+          {/* Upload Button */}
+          <div className="mb-6 text-center">
+            <h2 className="text-lg font-semibold mb-2">📤 Share Document</h2>
+            <button
+              onClick={triggerFileSelect}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            >
+              📁 Choose File
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,.pdf"
+              onChange={handleFileChange}
               className="hidden"
             />
-          );
-        })}
+          </div>
 
-        {/* Leave */}
-        <button
-          onClick={handleLeaveRoom}
-          className="mt-10 bg-red-600 text-white px-6 py-2 w-48 rounded-md hover:bg-red-700"
-        >
-          Leave Room
-        </button>
+          {/* Preview */}
+          {sharedMediaUrl && sharedMediaType && (
+            <div className="mb-6 text-center relative">
+              <h2 className="text-lg font-semibold">📎 Shared Preview</h2>
+              <div className="relative inline-block">
+                {sharedMediaType === "pdf" ? (
+                  <iframe
+                    src={sharedMediaUrl}
+                    width="640"
+                    height="480"
+                    className="border max-w-full max-h-96"
+                  />
+                ) : (
+                  <Image
+                    src={sharedMediaUrl}
+                    alt="Shared"
+                    width={640}
+                    height={480}
+                    unoptimized
+                    className="w-auto h-auto max-w-full max-h-96 object-contain"
+                  />
+                )}
+
+                {localUserId === participants[0] && (
+                  <button
+                    onClick={handleClearMedia}
+                    className="absolute top-2 right-2 bg-black bg-opacity-70 text-white px-3 py-1 rounded hover:bg-opacity-90"
+                  >
+                    ✖ Close
+                  </button>
+                )}
+
+                <a
+                  href={sharedMediaUrl}
+                  download={`shared-content.${
+                    sharedMediaType === "pdf" ? "pdf" : "jpg"
+                  }`}
+                  className="absolute bottom-2 right-2 bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                >
+                  ⬇ Download
+                </a>
+              </div>
+            </div>
+          )}
+
+          {/* Remote Audios */}
+          {remoteStreams.map((entry) => {
+            if (!remoteAudioRefs.current[entry.id]) {
+              remoteAudioRefs.current[entry.id] =
+                React.createRef<HTMLAudioElement>();
+            }
+
+            return (
+              <audio
+                key={entry.id}
+                autoPlay
+                ref={remoteAudioRefs.current[entry.id]}
+                className="hidden"
+              />
+            );
+          })}
+
+          {/* Leave */}
+          <button
+            onClick={handleLeaveRoom}
+            className="mt-10 bg-red-600 text-white px-6 py-2 w-48 rounded-md hover:bg-red-700"
+          >
+            Leave Room
+          </button>
+        </div>
       </main>
     </div>
   );
