@@ -1,119 +1,190 @@
 package services
 
 import (
+	"context"
+	"encoding/json"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
+	"time"
 
-	socketio "github.com/googollee/go-socket.io"
+	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 )
 
-var rooms = make(map[string]map[string]bool)
-var roomLock = sync.Mutex{}
-
-func StartSignalingServer(port string, server *socketio.Server) {
-    server.OnConnect("/", func(s socketio.Conn) error {
-        log.Println("WebSocket Connected:", s.ID())
-        return nil
-    })
-
-    server.OnError("/", func(s socketio.Conn, err error) {
-        log.Println("WebSocket Error:", err)
-    })
-
-    server.OnEvent("/", "join-room", func(s socketio.Conn, room string) {
-        s.Join(room)
-        roomLock.Lock()
-        if rooms[room] == nil {
-            rooms[room] = make(map[string]bool)
-        }
-        rooms[room][s.ID()] = true
-        roomLock.Unlock()
-
-        log.Println("🔹 User", s.ID(), "joined room:", room)
-        server.BroadcastToRoom("/", room, "user-joined", s.ID())
-    })
-
-    server.OnEvent("/", "leave-room", func(s socketio.Conn, room string) {
-        LeaveRoom(s, room, server)
-    })
-
-    server.OnEvent("/", "close-room", func(s socketio.Conn, room string) {
-        CloseRoom(room, server)
-    })
-
-    server.OnDisconnect("/", func(s socketio.Conn, reason string) {
-        log.Println("🚪 User disconnected:", s.ID(), "| Reason:", reason)
-        LeaveRoom(s, "", server)
-    })
-
-    go func() {
-        if err := server.Serve(); err != nil {
-            log.Fatalf("⚠️ Socket.io server failed: %v", err)
-        }
-    }()
-    defer server.Close()
-
-    http.Handle("/socket.io/", server)
-    log.Printf("✅ Signaling server started on :%s", port)
-    if err := http.ListenAndServe(":"+port, nil); err != nil {
-        log.Fatalf("🚨 HTTP server failed: %v", err)
-    }
+type Client struct {
+	ID     string
+	Conn   *websocket.Conn
+	RoomID string
 }
 
-func CreateRoom(roomID string, server *socketio.Server) (string, int) {
-    roomLock.Lock()
-    defer roomLock.Unlock()
+var (
+	upgrader = websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool {
+			return true
+		},
+	}
 
-    if _, exists := rooms[roomID]; exists {
-        log.Println("⚠️ Room already exists:", roomID)
-        return "Room already exists", http.StatusConflict
-    }
+	clients  = make(map[string]*Client)
+	rooms    = make(map[string]map[string]*Client)
+	roomLock sync.Mutex
+)
 
-    rooms[roomID] = make(map[string]bool)
-    log.Println("✅ Room created:", roomID)
-    return "Room created", http.StatusOK
+func StartSignalingServer(port string) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/ws", handleWebSocket)
+
+	srv := &http.Server{
+		Addr:    ":" + port,
+		Handler: mux,
+	}
+
+	go func() {
+		log.Println("✅ WebSocket signaling server running on ws://localhost:" + port)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("❌ Server error: %v", err)
+		}
+	}()
+
+	go func() {
+		stop := make(chan os.Signal, 1)
+		signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+		<-stop
+
+		log.Println("🛑 Shutting down WebSocket server...")
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		srv.Shutdown(ctx)
+	}()
 }
 
-func CloseRoom(roomID string, server *socketio.Server) (string, int) {
-    roomLock.Lock()
-    defer roomLock.Unlock()
+func handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println("❌ Upgrade error:", err)
+		return
+	}
 
-    if _, exists := rooms[roomID]; exists {
-        delete(rooms, roomID)
-        server.BroadcastToNamespace("/", "room-closed", roomID)
-        log.Println("Room closed:", roomID)
-        return "Room closed", http.StatusOK
-    }
+	clientID := uuid.New().String()
+	client := &Client{ID: clientID, Conn: conn}
+	clients[clientID] = client
 
-    log.Println("Room not found:", roomID)
-    return "Room not found", http.StatusNotFound
+	log.Println("🔌 Connected:", clientID)
+
+	err = conn.WriteJSON(map[string]interface{}{
+		"type":   "init",
+		"userId": clientID,
+	})
+	if err != nil {
+		log.Printf("❌ Failed to send init to %s: %v", clientID, err)
+		conn.Close()
+		return
+	}
+
+	defer func() {
+		removeClient(client)
+		conn.Close()
+		log.Println("❌ Disconnected:", clientID)
+	}()
+
+	for {
+		_, message, err := conn.ReadMessage()
+		if err != nil {
+			log.Printf("📴 Read error from %s: %v", clientID, err)
+			break
+		}
+
+		var msg map[string]interface{}
+		if err := json.Unmarshal(message, &msg); err != nil {
+			log.Printf("⚠️ Invalid JSON from %s: %v", clientID, err)
+			continue
+		}
+
+		log.Printf("📨 Received from %s: %v", clientID, msg)
+
+		switch msg["type"] {
+		case "join":
+			roomID, ok := msg["roomId"].(string)
+			if !ok || roomID == "" {
+				log.Printf("⚠️ Invalid join from %s: missing roomId", clientID)
+				break
+			}
+			client.RoomID = roomID
+			log.Printf("🚪 %s joining room %s", clientID, roomID)
+			registerClient(roomID, client)
+
+		case "offer", "answer", "ice-candidate":
+			targetID, ok := msg["userId"].(string)
+			if !ok {
+				log.Printf("⚠️ Invalid signaling message from %s: missing userId", clientID)
+				break
+			}
+			msg["from"] = client.ID
+			forwardMessage(targetID, msg)
+
+		case "leave":
+			log.Printf("👋 %s is leaving room", clientID)
+			removeClient(client)
+
+		default:
+			log.Printf("⚠️ Unknown message type from %s: %v", clientID, msg["type"])
+		}
+	}
 }
 
-func LeaveRoom(s socketio.Conn, roomID string, server *socketio.Server) {
-    roomLock.Lock()
-    defer roomLock.Unlock()
+func registerClient(roomID string, client *Client) {
+	roomLock.Lock()
+	defer roomLock.Unlock()
 
-    if roomID == "" {
-        for r, users := range rooms {
-            if users[s.ID()] {
-                roomID = r
-                break
-            }
-        }
-    }
+	if rooms[roomID] == nil {
+		rooms[roomID] = make(map[string]*Client)
+	}
 
-    if rooms[roomID] != nil {
-        delete(rooms[roomID], s.ID())
-        server.BroadcastToRoom("/", roomID, "user-left", s.ID())
+	for _, peer := range rooms[roomID] {
+		peer.Conn.WriteJSON(map[string]interface{}{
+			"type":   "user-joined",
+			"userId": client.ID,
+		})
 
-        if len(rooms[roomID]) == 0 {
-            delete(rooms, roomID)
-            log.Println("Room closed:", roomID)
-            server.BroadcastToNamespace("/", "room-closed", roomID)
-        }
-    }
+		client.Conn.WriteJSON(map[string]interface{}{
+			"type":   "user-joined",
+			"userId": peer.ID,
+		})
+	}
 
-    s.Leave(roomID)
-    log.Println("User left room:", s.ID())
+	rooms[roomID][client.ID] = client
+}
+
+func forwardMessage(targetID string, msg map[string]interface{}) {
+	if target, ok := clients[targetID]; ok {
+		err := target.Conn.WriteJSON(msg)
+		if err != nil {
+			log.Printf("❌ Failed to send to %s: %v", targetID, err)
+		}
+	}
+}
+
+func removeClient(client *Client) {
+	roomLock.Lock()
+	defer roomLock.Unlock()
+
+	delete(clients, client.ID)
+
+	if client.RoomID != "" {
+		if room, ok := rooms[client.RoomID]; ok {
+			delete(room, client.ID)
+			for _, peer := range room {
+				peer.Conn.WriteJSON(map[string]interface{}{
+					"type":   "leave",
+					"userId": client.ID,
+				})
+			}
+			if len(room) == 0 {
+				delete(rooms, client.RoomID)
+			}
+		}
+	}
 }

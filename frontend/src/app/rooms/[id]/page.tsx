@@ -5,8 +5,8 @@ import { useWebRTC } from "@/hooks/useWebRTC";
 
 export default function RoomPage() {
   const { id } = useParams();
-  const { stream, peers, leaveRoom } = useWebRTC(id as string);
   const router = useRouter();
+  const { stream, remoteStreams, leaveRoom } = useWebRTC(id as string);
 
   const handleLeave = () => {
     leaveRoom();
@@ -15,37 +15,43 @@ export default function RoomPage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
-      <h1 className="text-2xl font-bold">Room {id}</h1>
-      <audio
-        autoPlay
-        controls
-        ref={(audio) => {
-          if (audio && stream) audio.srcObject = stream;
-        }}
-      />
+      <h1 className="text-2xl font-bold mb-4">Room {id}</h1>
 
-      <div className="mt-4">
-        {Object.values(peers).map((peer, i) => (
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold">🔊 Local Audio</h2>
           <audio
-            key={i}
             autoPlay
             controls
             ref={(audio) => {
-              if (audio) {
-                const remoteStream = new MediaStream();
-                peer
-                  .getReceivers()
-                  .forEach((receiver) => remoteStream.addTrack(receiver.track));
-                audio.srcObject = remoteStream;
+              if (audio && stream) {
+                audio.srcObject = stream;
               }
             }}
           />
+        </div>
+
+        {remoteStreams.map((entry) => (
+          <div key={entry.id}>
+            <h2 className="text-lg font-semibold">
+              🎧 Remote Audio: {entry.id}
+            </h2>
+            <audio
+              autoPlay
+              controls
+              ref={(audio) => {
+                if (audio) {
+                  audio.srcObject = entry.stream;
+                }
+              }}
+            />
+          </div>
         ))}
       </div>
 
       <button
         onClick={handleLeave}
-        className="mt-6 bg-red-500 text-white px-6 py-2 rounded-md hover:bg-red-600 hover:cursor-pointer"
+        className="mt-6 bg-red-500 text-white px-6 py-2 rounded-md hover:bg-red-600"
       >
         Leave Room
       </button>

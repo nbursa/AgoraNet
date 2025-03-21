@@ -36,7 +36,7 @@ export default function RoomsPage() {
       console.error("Failed to notify backend about room creation:", error);
     }
 
-    router.push(`/rooms/${newRoomId}`);
+    // router.push(`/rooms/${newRoomId}`);
   };
 
   const closeRoom = async (roomId: string) => {
