@@ -56,49 +56,58 @@ export default function RoomsPage() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-full p-6 w-full max-w-3xl mx-auto">
-      <h1 className="text-3xl font-bold text-center">Active Rooms</h1>
-      <p className="mt-2 text-gray-400 text-center">
-        Manage your discussion spaces
-      </p>
+    <div className="w-full h-full">
+      <div className="flex items-center justify-center min-h-full p-6">
+        <div className="w-full max-w-3xl">
+          <h1 className="text-3xl font-bold text-center">Active Rooms</h1>
+          <p className="mt-2 text-gray-400 text-center">
+            Manage your discussion spaces
+          </p>
 
-      <div className="mt-6">
-        <button
-          onClick={createRoom}
-          className="bg-purple-600 text-white px-6 py-2 rounded-md hover:bg-purple-700 hover:cursor-pointer"
-        >
-          Create New Room
-        </button>
-      </div>
-
-      <h2 className="mt-8 text-xl font-semibold">Available Rooms</h2>
-      <div className="mt-4 w-full space-y-2 flex flex-col items-center">
-        {rooms.length > 0 ? (
-          rooms.map((room) => (
-            <div
-              key={room}
-              className="group flex justify-between items-center w-full max-w-md p-2 border border-gray-100 rounded-md hover:bg-gray-900 transition"
+          <div className="mt-6 text-center">
+            <button
+              onClick={createRoom}
+              className="bg-purple-600 text-white px-6 py-2 rounded-md hover:bg-purple-700 hover:cursor-pointer"
             >
-              <Link href={`/rooms/${room}`} className="block px-2 py-1 w-full">
-                {room}
-              </Link>
+              Create New Room
+            </button>
+          </div>
 
-              <div className="relative z-10">
-                <button
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    closeRoom(room);
-                  }}
-                  className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 hover:cursor-pointer"
+          <h2 className="mt-8 text-xl font-semibold text-center">
+            Available Rooms
+          </h2>
+          <div className="mt-4 w-full space-y-2 flex flex-col items-center">
+            {rooms.length > 0 ? (
+              rooms.map((room) => (
+                <div
+                  key={room}
+                  className="group flex justify-between items-center w-full max-w-md p-2 border border-gray-100 rounded-md hover:bg-gray-900 transition"
                 >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))
-        ) : (
-          <p className="text-gray-400">No active rooms</p>
-        )}
+                  <Link
+                    href={`/rooms/${room}`}
+                    className="block px-2 py-1 w-full"
+                  >
+                    {room}
+                  </Link>
+
+                  <div className="relative z-10">
+                    <button
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        closeRoom(room);
+                      }}
+                      className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 hover:cursor-pointer"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-400">No active rooms</p>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
