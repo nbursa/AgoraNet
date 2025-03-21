@@ -25,6 +25,8 @@ export default function RoomPage() {
     Record<string, React.MutableRefObject<HTMLAudioElement | null>>
   >({});
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     if (localAudioRef.current && stream) {
       localAudioRef.current.srcObject = stream;
@@ -59,6 +61,13 @@ export default function RoomPage() {
     };
 
     reader.readAsDataURL(file);
+  };
+
+  const handleClearMedia = () => {
+    sendSharedMedia(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const handleLeaveRoom = () => {
@@ -101,6 +110,7 @@ export default function RoomPage() {
         <div className="mb-6 text-center">
           <h2 className="text-lg font-semibold">📤 Share Visual Document</h2>
           <input
+            ref={fileInputRef}
             type="file"
             accept="image/*,.pdf"
             onChange={handleFileChange}
@@ -134,7 +144,7 @@ export default function RoomPage() {
               {/* Close */}
               {localUserId === participants[0] && (
                 <button
-                  onClick={() => sendSharedMedia(null)}
+                  onClick={handleClearMedia}
                   className="absolute top-2 right-2 bg-black bg-opacity-70 text-white px-3 py-1 rounded hover:bg-opacity-90"
                 >
                   ✖ Close
