@@ -174,17 +174,15 @@ export function useWebRTC(roomId: string) {
             case "answer":
               {
                 const peer = peersRef.current[message.userId];
-                if (peer) {
-                  if (peer.signalingState === "have-local-offer") {
-                    await peer.setRemoteDescription(
-                      new RTCSessionDescription(message.answer)
-                    );
-                  } else {
-                    console.warn(
-                      `⚠️ Skipping setRemoteDescription(answer) for ${message.userId} — signalingState:`,
-                      peer.signalingState
-                    );
-                  }
+                if (peer && peer.signalingState === "have-local-offer") {
+                  await peer.setRemoteDescription(
+                    new RTCSessionDescription(message.answer)
+                  );
+                } else {
+                  console.warn(
+                    `⚠️ Skipping setRemoteDescription(answer) for ${message.userId} — signalingState:`,
+                    peer?.signalingState
+                  );
                 }
               }
               break;

@@ -63,26 +63,32 @@ export default function RoomPage() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen">
+    <div className="flex flex-col items-center justify-center min-h-screen px-4">
       <h1 className="text-2xl font-bold mb-2">Room {id}</h1>
-      {localUserId && (
-        <p className="text-sm text-gray-500 mb-4">
-          Your User ID: <span className="font-mono">{localUserId}</span>
-        </p>
-      )}
 
-      <div className="space-y-4">
+      <div className="space-y-6 w-full max-w-xl">
         <div>
           <h2 className="text-lg font-semibold">🔊 Local Audio</h2>
-          <audio autoPlay controls ref={localAudioRef} />
+          {localUserId && (
+            <p className="text-xs text-gray-400 mb-1 font-mono">
+              ID: {localUserId}
+            </p>
+          )}
+          <audio autoPlay controls ref={localAudioRef} className="w-full" />
         </div>
 
         {remoteStreams.map((entry) => (
           <div key={entry.id}>
-            <h2 className="text-lg font-semibold">
-              🎧 Remote Audio: {entry.id}
-            </h2>
-            <audio autoPlay controls ref={remoteAudioRefs[entry.id]} />
+            <h2 className="text-lg font-semibold">🎧 Remote Audio</h2>
+            <p className="text-xs text-gray-400 mb-1 font-mono">
+              ID: {entry.id}
+            </p>
+            <audio
+              autoPlay
+              controls
+              ref={remoteAudioRefs[entry.id]}
+              className="w-full"
+            />
           </div>
         ))}
       </div>
