@@ -44,13 +44,17 @@ export default function RoomPage() {
     });
   }, [remoteStreams]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Convert file to object URL and send
-    const url = URL.createObjectURL(file);
-    sendSharedImage(url);
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onloadend = () => {
+      if (reader.result) {
+        sendSharedImage(reader.result as string);
+      }
+    };
   };
 
   const handleLeaveRoom = () => {
