@@ -44,9 +44,12 @@ export function useWebRTC(roomId: string) {
 
       const peer = new RTCPeerConnection();
 
-      stream?.getTracks().forEach((track) => {
-        peer.addTrack(track, stream);
-      });
+      // Add local tracks to peer connection
+      if (stream) {
+        stream.getTracks().forEach((track) => {
+          peer.addTrack(track, stream);
+        });
+      }
 
       peer.onicecandidate = (event) => {
         if (event.candidate) {
@@ -60,11 +63,23 @@ export function useWebRTC(roomId: string) {
 
       peer.ontrack = (event) => {
         const remoteStream = event.streams[0];
+        console.log("Remote stream received:", remoteStream);
+
         if (remoteStream) {
+          console.log(`Remote stream received from ${userId}`, remoteStream);
+
           setRemoteStreams((prev) => {
-            const exists = prev.find((s) => s.stream.id === remoteStream.id);
-            if (exists) return prev;
-            return [...prev, { id: userId, stream: remoteStream }];
+            // Check if the remote stream for this userId already exists
+            const exists = prev.some((s) => s.id === userId);
+
+            if (!exists) {
+              console.log(`Adding remote stream for userId: ${userId}`);
+              // Only add the stream once per userId
+              return [...prev, { id: userId, stream: remoteStream }];
+            }
+
+            // If the stream already exists, return the previous state (do not add again)
+            return prev;
           });
         }
       };
@@ -122,112 +137,126 @@ export function useWebRTC(roomId: string) {
 
     const connect = async () => {
       try {
-        if (typeof navigator !== "undefined" && navigator.mediaDevices) {
-          const localStream = await navigator.mediaDevices.getUserMedia({
-            audio: true,
-          });
-          setStream(localStream);
-          console.log("🎙️ Got local audio stream");
+        const localStream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+        });
+        setStream(localStream);
+        console.log("🎙️ Got local audio stream");
 
-          const socket = new WebSocket(SIGNALING_SERVER);
-          socketRef.current = socket;
+        const socket = new WebSocket(SIGNALING_SERVER);
+        socketRef.current = socket;
 
-          socket.onopen = () => {
-            console.log("✅ Connected to signaling server");
-          };
+        socket.onopen = () => {
+          console.log("✅ Connected to signaling server");
+        };
 
-          socket.onmessage = async (event) => {
-            const message: SignalMessage = JSON.parse(event.data);
-            console.log("📨 Message:", message);
+        socket.onmessage = async (event) => {
+          const message: SignalMessage = JSON.parse(event.data);
+          console.log("📨 Message:", message);
 
-            switch (message.type) {
-              case "init":
-                userIdRef.current = message.userId;
-                isJoiningRef.current = true;
-                console.log("🆔 Got user ID:", message.userId);
-                send({ type: "join", roomId });
+          switch (message.type) {
+            case "init":
+              userIdRef.current = message.userId;
+              isJoiningRef.current = true;
+              console.log("🆔 Got user ID:", message.userId);
+              send({ type: "join", roomId });
 
-                window.dispatchEvent(
-                  new CustomEvent("plenum-user-id", {
-                    detail: { userId: message.userId },
-                  })
-                );
-                break;
+              window.dispatchEvent(
+                new CustomEvent("plenum-user-id", {
+                  detail: { userId: message.userId },
+                })
+              );
+              break;
 
-              case "user-joined":
-                if (message.userId !== userIdRef.current) {
-                  createPeer(message.userId, true);
-                }
-                break;
+            case "user-joined":
+              if (message.userId !== userIdRef.current) {
+                createPeer(message.userId, true);
+              }
+              break;
 
-              case "offer":
-                {
-                  const peer = createPeer(message.userId, false);
-                  await peer.setRemoteDescription(
-                    new RTCSessionDescription(message.offer)
+            case "offer":
+              {
+                // Check if the peer connection already exists
+                let peer = peersRef.current[message.userId];
+                if (!peer) {
+                  // If no peer exists, create a new one
+                  peer = createPeer(message.userId, false);
+                } else {
+                  console.log(
+                    `Peer connection for ${message.userId} already exists.`
                   );
-                  const answer = await peer.createAnswer();
-                  await peer.setLocalDescription(answer);
-                  send({ type: "answer", userId: message.userId, answer });
                 }
-                break;
 
-              case "answer":
-                {
-                  const peer = peersRef.current[message.userId];
-                  if (peer && peer.signalingState === "have-local-offer") {
+                // Set the remote description (offer)
+                await peer.setRemoteDescription(
+                  new RTCSessionDescription(message.offer)
+                );
+
+                // Create an answer and set it as local description
+                const answer = await peer.createAnswer();
+                await peer.setLocalDescription(answer);
+
+                // Send the answer back to the signaling server
+                send({ type: "answer", userId: message.userId, answer });
+              }
+              break;
+
+            case "answer":
+              {
+                const peer = peersRef.current[message.userId];
+                if (peer) {
+                  // Check if the signaling state is not stable
+                  if (peer.signalingState !== "stable") {
+                    // Only set the remote description if it's not stable
                     await peer.setRemoteDescription(
                       new RTCSessionDescription(message.answer)
                     );
                   } else {
                     console.warn(
-                      `⚠️ Skipping setRemoteDescription(answer) for ${message.userId} — signalingState:`,
-                      peer?.signalingState
+                      `⚠️ Skipping setRemoteDescription(answer) for ${message.userId} — signalingState: ${peer.signalingState}`
                     );
                   }
                 }
-                break;
+              }
+              break;
 
-              case "ice-candidate":
-                {
-                  const peer = peersRef.current[message.userId];
-                  if (peer) {
-                    try {
-                      await peer.addIceCandidate(
-                        new RTCIceCandidate(message.candidate)
-                      );
-                    } catch (err) {
-                      console.warn("❌ Failed to add ICE candidate:", err);
-                    }
+            case "ice-candidate":
+              {
+                const peer = peersRef.current[message.userId];
+                if (peer) {
+                  try {
+                    await peer.addIceCandidate(
+                      new RTCIceCandidate(message.candidate)
+                    );
+                  } catch (err) {
+                    console.warn("❌ Failed to add ICE candidate:", err);
                   }
                 }
-                break;
+              }
+              break;
 
-              case "leave":
-                {
-                  const peer = peersRef.current[message.userId];
-                  if (peer) peer.close();
-                  delete peersRef.current[message.userId];
-                  setRemoteStreams((prev) =>
-                    prev.filter((s) => s.id !== message.userId)
-                  );
-                  console.log(`👋 Peer ${message.userId} left`);
-                }
-                break;
-            }
-          };
+            case "leave":
+              {
+                const peer = peersRef.current[message.userId];
+                if (peer) peer.close();
+                delete peersRef.current[message.userId];
+                setRemoteStreams((prev) =>
+                  prev.filter((s) => s.id !== message.userId)
+                );
+                console.log(`👋 Peer ${message.userId} left`);
+              }
+              break;
+          }
+        };
 
-          socket.onclose = () => {
-            console.warn("🔌 WebSocket closed");
-            socketRef.current = null;
-          };
+        socket.onclose = () => {
+          console.warn("🔌 WebSocket closed");
+          socketRef.current = null;
+        };
 
-          socket.onerror = (e) => {
-            console.error("WebSocket error:", e);
-          };
-        } else {
-          console.error("❌ MediaDevices not available.");
-        }
+        socket.onerror = (e) => {
+          console.error("WebSocket error:", e);
+        };
       } catch (err) {
         console.error("❌ Failed to connect:", err);
       }

@@ -144,15 +144,21 @@ func registerClient(roomID string, client *Client) {
 	}
 
 	for _, peer := range rooms[roomID] {
-		peer.Conn.WriteJSON(map[string]interface{}{
+		err := peer.Conn.WriteJSON(map[string]interface{}{
 			"type":   "user-joined",
 			"userId": client.ID,
 		})
+		if err != nil {
+			log.Printf("❌ Failed to send user-joined to %s: %v", peer.ID, err)
+		}
 
-		client.Conn.WriteJSON(map[string]interface{}{
+		err = client.Conn.WriteJSON(map[string]interface{}{
 			"type":   "user-joined",
 			"userId": peer.ID,
 		})
+		if err != nil {
+			log.Printf("❌ Failed to send user-joined to %s: %v", client.ID, err)
+		}
 	}
 
 	rooms[roomID][client.ID] = client
