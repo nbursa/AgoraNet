@@ -56,7 +56,7 @@ export default function RoomsPage() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-6 w-full max-w-3xl mx-auto">
+    <div className="flex flex-col items-center justify-center h-full p-6 w-full max-w-3xl mx-auto">
       <h1 className="text-3xl font-bold text-center">Active Rooms</h1>
       <p className="mt-2 text-gray-400 text-center">
         Manage your discussion spaces
