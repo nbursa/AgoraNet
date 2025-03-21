@@ -53,9 +53,15 @@ export function useWebRTC(roomId: string): {
     }
   }, []);
 
+  // const sendSharedImage = useCallback(
+  //   (imageUrl: string) => {
+  //     send({ type: "share-image", imageUrl });
+  //   },
+  //   [send]
+  // );
   const sendSharedImage = useCallback(
-    (imageUrl: string) => {
-      send({ type: "share-image", imageUrl });
+    (imageUrl: string | null) => {
+      send({ type: "share-image", imageUrl: imageUrl || "" });
     },
     [send]
   );
@@ -181,7 +187,7 @@ export function useWebRTC(roomId: string): {
               break;
 
             case "shared-image":
-              setSharedImageUrl(message.imageUrl);
+              setSharedImageUrl(message.imageUrl || null);
               break;
 
             case "offer": {

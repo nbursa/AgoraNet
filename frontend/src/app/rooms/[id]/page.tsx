@@ -106,19 +106,39 @@ export default function RoomPage() {
 
         {/* Shared Image Preview */}
         {sharedImageUrl && (
-          <div className="mb-6 text-center">
+          <div className="mb-6 text-center relative">
             <h2 className="text-lg font-semibold">🖼️ Shared Image</h2>
-            <Image
-              src={sharedImageUrl}
-              alt="Shared content"
-              width={640}
-              height={480}
-              unoptimized
-              className="w-auto h-auto max-w-full max-h-96 object-contain"
-              onError={(e) => {
-                console.error("Image failed to load:", e);
-              }}
-            />
+
+            <div className="relative inline-block">
+              <Image
+                src={sharedImageUrl}
+                alt="Shared content"
+                width={640}
+                height={480}
+                unoptimized
+                className="w-auto h-auto max-w-full max-h-96 object-contain"
+                onError={(e) => {
+                  console.error("Image failed to load:", e);
+                }}
+              />
+
+              {/* Close Button */}
+              <button
+                onClick={() => sendSharedImage("")}
+                className="absolute top-2 right-2 bg-black bg-opacity-70 text-white px-3 py-1 rounded hover:bg-opacity-90"
+              >
+                ✖ Close
+              </button>
+
+              {/* Download Button */}
+              <a
+                href={sharedImageUrl}
+                download="shared-image.jpg"
+                className="absolute bottom-2 right-2 bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+              >
+                ⬇ Download
+              </a>
+            </div>
           </div>
         )}
 
