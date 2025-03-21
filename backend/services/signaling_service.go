@@ -136,32 +136,38 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 }
 
 func registerClient(roomID string, client *Client) {
-	roomLock.Lock()
-	defer roomLock.Unlock()
+    roomLock.Lock()
+    defer roomLock.Unlock()
 
-	if rooms[roomID] == nil {
-		rooms[roomID] = make(map[string]*Client)
-	}
+    if rooms[roomID] == nil {
+        rooms[roomID] = make(map[string]*Client)
+    }
 
-	for _, peer := range rooms[roomID] {
-		err := peer.Conn.WriteJSON(map[string]interface{}{
-			"type":   "user-joined",
-			"userId": client.ID,
-		})
-		if err != nil {
-			log.Printf("❌ Failed to send user-joined to %s: %v", peer.ID, err)
-		}
+    rooms[roomID][client.ID] = client
 
-		err = client.Conn.WriteJSON(map[string]interface{}{
-			"type":   "user-joined",
-			"userId": peer.ID,
-		})
-		if err != nil {
-			log.Printf("❌ Failed to send user-joined to %s: %v", client.ID, err)
-		}
-	}
+    // Generate updated participant list
+    userList := []string{}
+    for _, peer := range rooms[roomID] {
+        userList = append(userList, peer.ID)
+    }
 
-	rooms[roomID][client.ID] = client
+    // 🔄 Broadcast updated participant list to everyone in the room
+    for _, peer := range rooms[roomID] {
+        peer.Conn.WriteJSON(map[string]interface{}{
+            "type":  "participants",
+            "users": userList,
+        })
+    }
+
+    // 📢 Notify others (if needed) - optional since "participants" now handles it
+    for _, peer := range rooms[roomID] {
+        if peer.ID != client.ID {
+            peer.Conn.WriteJSON(map[string]interface{}{
+                "type":   "user-joined",
+                "userId": client.ID,
+            })
+        }
+    }
 }
 
 func forwardMessage(targetID string, msg map[string]interface{}) {
