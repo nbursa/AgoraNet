@@ -88,7 +88,7 @@ export default function RoomPage() {
   return (
     <div className="flex flex-row w-full h-full overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-64 bg-gray-900 text-white p-4 border-r border-gray-700 overflow-y-auto">
+      <aside className="w-64 h-full bg-gray-900 text-white p-4 border-r border-gray-700 flex flex-col">
         <h2 className="text-xl font-semibold mb-4">🧑‍🤝‍🧑 Participants</h2>
 
         <button
@@ -98,20 +98,24 @@ export default function RoomPage() {
           {copied ? "✅ Copied!" : "📋 Copy Room URL"}
         </button>
 
-        <ul className="space-y-2 text-sm font-mono">
-          {participants.map((uid, index) => (
-            <li
-              key={uid}
-              className={uid === localUserId ? "text-green-400" : "text-white"}
-            >
-              {uid === localUserId
-                ? `🟢 You (${uid})`
-                : index === 0
-                ? `👑 Host (${uid})`
-                : `🔉 Guest (${uid})`}
-            </li>
-          ))}
-        </ul>
+        <div className="flex-1 overflow-y-auto pr-1">
+          <ul className="space-y-2 text-sm font-mono">
+            {participants.map((uid, index) => (
+              <li
+                key={uid}
+                className={
+                  uid === localUserId ? "text-green-400" : "text-white"
+                }
+              >
+                {uid === localUserId
+                  ? `🟢 You (${uid})`
+                  : index === 0
+                  ? `👑 Host (${uid})`
+                  : `🔉 Guest (${uid})`}
+              </li>
+            ))}
+          </ul>
+        </div>
       </aside>
 
       {/* Main Area */}
