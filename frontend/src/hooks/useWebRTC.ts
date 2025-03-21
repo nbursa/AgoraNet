@@ -145,6 +145,12 @@ export function useWebRTC(roomId: string) {
               isJoiningRef.current = true;
               console.log("🆔 Got user ID:", message.userId);
               send({ type: "join", roomId });
+
+              window.dispatchEvent(
+                new CustomEvent("plenum-user-id", {
+                  detail: { userId: message.userId },
+                })
+              );
               break;
 
             case "user-joined":
@@ -169,9 +175,16 @@ export function useWebRTC(roomId: string) {
               {
                 const peer = peersRef.current[message.userId];
                 if (peer) {
-                  await peer.setRemoteDescription(
-                    new RTCSessionDescription(message.answer)
-                  );
+                  if (peer.signalingState === "have-local-offer") {
+                    await peer.setRemoteDescription(
+                      new RTCSessionDescription(message.answer)
+                    );
+                  } else {
+                    console.warn(
+                      `⚠️ Skipping setRemoteDescription(answer) for ${message.userId} — signalingState:`,
+                      peer.signalingState
+                    );
+                  }
                 }
               }
               break;

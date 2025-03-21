@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useWebRTC } from "@/hooks/useWebRTC";
 
@@ -8,6 +9,54 @@ export default function RoomPage() {
   const router = useRouter();
   const { stream, remoteStreams, leaveRoom } = useWebRTC(id as string);
 
+  const [localUserId, setLocalUserId] = useState<string | null>(null);
+
+  const localAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [remoteAudioRefs, setRemoteAudioRefs] = useState<{
+    [id: string]: React.RefObject<HTMLAudioElement | null>;
+  }>({});
+
+  useEffect(() => {
+    if (localAudioRef.current && stream) {
+      localAudioRef.current.srcObject = stream;
+    }
+  }, [stream]);
+
+  useEffect(() => {
+    setRemoteAudioRefs((prevRefs) => {
+      const newRefs = { ...prevRefs };
+      remoteStreams.forEach((entry) => {
+        if (!newRefs[entry.id]) {
+          newRefs[entry.id] = React.createRef<HTMLAudioElement>();
+        }
+      });
+      return newRefs;
+    });
+  }, [remoteStreams]);
+
+  useEffect(() => {
+    remoteStreams.forEach((entry) => {
+      const ref = remoteAudioRefs[entry.id];
+      if (ref?.current) {
+        ref.current.srcObject = entry.stream;
+      }
+    });
+  }, [remoteStreams, remoteAudioRefs]);
+
+  useEffect(() => {
+    const handleUserId = (e: CustomEvent<{ userId: string }>) => {
+      if (e.detail?.userId) setLocalUserId(e.detail.userId);
+    };
+
+    window.addEventListener("plenum-user-id", handleUserId as EventListener);
+
+    return () =>
+      window.removeEventListener(
+        "plenum-user-id",
+        handleUserId as EventListener
+      );
+  }, []);
+
   const handleLeave = () => {
     leaveRoom();
     router.push("/rooms");
@@ -15,20 +64,17 @@ export default function RoomPage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
-      <h1 className="text-2xl font-bold mb-4">Room {id}</h1>
+      <h1 className="text-2xl font-bold mb-2">Room {id}</h1>
+      {localUserId && (
+        <p className="text-sm text-gray-500 mb-4">
+          Your User ID: <span className="font-mono">{localUserId}</span>
+        </p>
+      )}
 
       <div className="space-y-4">
         <div>
           <h2 className="text-lg font-semibold">🔊 Local Audio</h2>
-          <audio
-            autoPlay
-            controls
-            ref={(audio) => {
-              if (audio && stream) {
-                audio.srcObject = stream;
-              }
-            }}
-          />
+          <audio autoPlay controls ref={localAudioRef} />
         </div>
 
         {remoteStreams.map((entry) => (
@@ -36,15 +82,7 @@ export default function RoomPage() {
             <h2 className="text-lg font-semibold">
               🎧 Remote Audio: {entry.id}
             </h2>
-            <audio
-              autoPlay
-              controls
-              ref={(audio) => {
-                if (audio) {
-                  audio.srcObject = entry.stream;
-                }
-              }}
-            />
+            <audio autoPlay controls ref={remoteAudioRefs[entry.id]} />
           </div>
         ))}
       </div>
