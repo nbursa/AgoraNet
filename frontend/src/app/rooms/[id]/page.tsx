@@ -22,9 +22,8 @@ export default function RoomPage() {
 
   const localAudioRef = useRef<HTMLAudioElement>(null);
   const remoteAudioRefs = useRef<
-    Record<string, React.MutableRefObject<HTMLAudioElement | null>>
+    Record<string, React.RefObject<HTMLAudioElement | null>>
   >({});
-
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
