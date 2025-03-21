@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { useWebRTC } from "@/hooks/useWebRTC";
@@ -25,6 +25,7 @@ export default function RoomPage() {
     Record<string, React.RefObject<HTMLAudioElement | null>>
   >({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (localAudioRef.current && stream) {
@@ -78,11 +79,26 @@ export default function RoomPage() {
     fileInputRef.current?.click();
   };
 
+  const handleCopyRoomUrl = () => {
+    navigator.clipboard.writeText(window.location.href);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 3000);
+  };
+
   return (
     <div className="flex flex-row h-screen w-full">
       {/* Sidebar */}
       <aside className="w-64 bg-gray-900 text-white p-4 border-r border-gray-700 overflow-y-auto min-h-screen">
         <h2 className="text-xl font-semibold mb-4">🧑‍🤝‍🧑 Participants</h2>
+
+        {/* Copy URL Button */}
+        <button
+          onClick={handleCopyRoomUrl}
+          className="mb-4 w-full bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm"
+        >
+          {copied ? "✅ Copied!" : "📋 Copy Room URL"}
+        </button>
+
         <ul className="space-y-2 text-sm font-mono">
           {participants.map((uid, index) => (
             <li
