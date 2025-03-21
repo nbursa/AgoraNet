@@ -1,94 +1,61 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { api, logout } from "@/lib/api";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
+import Link from "next/link";
 
-export default function DashboardPage() {
-  const [user, setUser] = useState<{
-    username: string;
-    avatar?: string;
-  } | null>(null);
-  const [recentActivities, setRecentActivities] = useState<string[]>([]);
-  const router = useRouter();
-
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      router.push("/login");
-      return;
-    }
-
-    api
-      .get("/auth/me", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => setUser(res.data))
-      .catch(() => {
-        logout();
-      });
-
-    setRecentActivities([
-      "Joined a new discussion room",
-      "Updated profile settings",
-      "Sent a message in #general",
-    ]);
-  }, [router]);
-
+export default function AboutPage() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-6">
-      <div className="w-full max-w-4xl border border-gray-300 p-6 rounded-lg shadow-md">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            {user?.avatar ? (
-              <Image
-                src={user.avatar}
-                alt="Avatar"
-                width={48}
-                height={48}
-                className="rounded-full border"
-              />
-            ) : (
-              <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
-                <span className="text-gray-600">?</span>
-              </div>
-            )}
-            <h1 className="text-xl font-bold">
-              Welcome, {user?.username || "User"} 👋
-            </h1>
+    <div className="w-full h-full overflow-y-auto">
+      <div className="flex flex-col items-center justify-center min-h-full max-w-3xl mx-auto px-6 py-10">
+        <h1 className="text-3xl font-bold text-center">
+          About Decentralized Plenum
+        </h1>
+        <p className="mt-4 text-gray-400 text-center">
+          Decentralized Plenum is a secure, censorship-resistant platform for{" "}
+          <strong>
+            voice-based discussions and collective decision-making
+          </strong>
+          . It empowers communities, activists, and individuals to engage in
+          free, anonymous, and democratic discussions.
+        </p>
+
+        <div className="mt-6 w-full border border-gray-500 p-4 mb-4 rounded-lg shadow-md flex flex-col items-center">
+          <h2 className="text-xl font-semibold text-center">Key Features</h2>
+          <div className="w-full flex justify-center">
+            <ol className="mt-2 text-gray-300 list-decimal list-inside text-left">
+              <li>Real-time voice rooms - using P2P WebRTC technology</li>
+              <li>Decentralized & censorship-resistant</li>
+              <li>No registration required - ensuring full anonymity</li>
+              <li>Integrated voting system - for decision-making</li>
+              <li>Self-hosted or public instance support</li>
+            </ol>
           </div>
-          <button
-            onClick={logout}
-            className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 hover:cursor-pointer"
-          >
-            Logout
-          </button>
         </div>
-      </div>
 
-      <div className="w-full max-w-4xl mt-6 grid grid-cols-3 gap-4">
-        <div className="bg-blue-500 text-white p-4 rounded-lg shadow-md">
-          <h2 className="text-lg font-semibold">Rooms Joined</h2>
-          <p className="text-2xl font-bold">5 (mock)</p>
+        <div className="mb-6 w-full">
+          <h2 className="text-xl font-semibold">💡 How It Works</h2>
+          <p className="mt-2 text-gray-400">
+            Users can create secure voice discussion rooms, invite participants,
+            and optionally conduct polls or votes within the platform. The
+            system is designed to operate without a central authority, ensuring
+            privacy and free speech.
+          </p>
         </div>
-        <div className="bg-green-500 text-white p-4 rounded-lg shadow-md">
-          <h2 className="text-lg font-semibold">Messages Sent</h2>
-          <p className="text-2xl font-bold">27 (mock)</p>
-        </div>
-        <div className="bg-purple-500 text-white p-4 rounded-lg shadow-md">
-          <h2 className="text-lg font-semibold">Active Discussions</h2>
-          <p className="text-2xl font-bold">3 (mock)</p>
-        </div>
-      </div>
 
-      <div className="w-full max-w-4xl mt-6 border border-gray-300 p-6 rounded-lg shadow-md">
-        <h2 className="text-xl font-bold mb-4">Recent Activity (mock)</h2>
-        <ul className="list-disc list-inside space-y-2 text-gray-500">
-          {recentActivities.map((activity, index) => (
-            <li key={index}>{activity}</li>
-          ))}
-        </ul>
+        <div className="mb-6 w-full">
+          <h2 className="text-xl font-semibold">🌍 Get Involved</h2>
+          <p className="mt-2 text-gray-400">
+            This project is open-source, and contributions are welcome! You can
+            check out the source code, report issues, and suggest features.
+          </p>
+        </div>
+
+        <div className="mt-6">
+          <Link href="/">
+            <button className="bg-purple-600 text-white px-6 py-2 rounded-md hover:bg-purple-700 hover:cursor-pointer">
+              Back to Home
+            </button>
+          </Link>
+        </div>
       </div>
     </div>
   );
