@@ -145,13 +145,11 @@ func registerClient(roomID string, client *Client) {
 
     rooms[roomID][client.ID] = client
 
-    // Generate updated participant list
     userList := []string{}
     for _, peer := range rooms[roomID] {
         userList = append(userList, peer.ID)
     }
 
-    // 🔄 Broadcast updated participant list to everyone in the room
     for _, peer := range rooms[roomID] {
         peer.Conn.WriteJSON(map[string]interface{}{
             "type":  "participants",
@@ -159,7 +157,6 @@ func registerClient(roomID string, client *Client) {
         })
     }
 
-    // 📢 Notify others (if needed) - optional since "participants" now handles it
     for _, peer := range rooms[roomID] {
         if peer.ID != client.ID {
             peer.Conn.WriteJSON(map[string]interface{}{

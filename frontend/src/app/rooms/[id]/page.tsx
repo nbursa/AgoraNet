@@ -73,7 +73,6 @@ export default function RoomPage() {
 
   return (
     <div className="flex flex-row h-screen w-full">
-      {/* Sidebar */}
       <div className="w-64 bg-gray-900 text-white p-4 border-r border-gray-700 overflow-y-auto min-h-screen flex flex-col">
         <h2 className="text-xl font-semibold mb-4">🧑‍🤝‍🧑 Participants</h2>
         <ul className="space-y-2 text-sm font-mono flex-grow">
@@ -97,17 +96,14 @@ export default function RoomPage() {
         )}
       </div>
 
-      {/* Main content */}
       <div className="flex-1 flex flex-col justify-center items-center p-6 min-h-screen">
         <h1 className="text-2xl font-bold mb-4">Room {id}</h1>
 
-        {/* Local Audio */}
         <div className="mb-6 text-center">
           <h2 className="text-lg font-semibold">🎙️ Your Microphone</h2>
           <audio autoPlay controls ref={localAudioRef} className="mt-2" />
         </div>
 
-        {/* Hidden Remote Audio Players */}
         {remoteStreams.map((entry) => (
           <audio
             key={entry.id}
