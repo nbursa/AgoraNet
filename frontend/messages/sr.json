@@ -118,6 +118,8 @@
     "mute": "Isključi zvuk",
     "unmute": "Uključi zvuk",
     "loading": "Učitavanje",
+    "mic-on": "Isključi mikrofon",
+    "mic-off": "Uključi mikrofon",
     "vote": {
       "title": "Glasanje",
       "start": "Započni glasanje",

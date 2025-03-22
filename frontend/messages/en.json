@@ -118,6 +118,8 @@
     "mute": "Mute",
     "unmute": "Unmute",
     "loading": "Loading",
+    "mic-on": "Mute microphone",
+    "mic-off": "Unmute microphone",
     "vote": {
       "title": "Voting",
       "start": "Start Voting",

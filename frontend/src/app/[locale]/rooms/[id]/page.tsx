@@ -31,44 +31,11 @@ export default function RoomPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [copied, setCopied] = useState(false);
   const [hasVoted, setHasVoted] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMicMuted, setIsMicMuted] = useState(true);
   const [speakingUsers, setSpeakingUsers] = useState<Set<string>>(new Set());
 
   const analyserRefs = useRef<Record<string, AnalyserNode>>({});
   const audioContextRef = useRef<AudioContext | null>(null);
-
-  useEffect(() => {
-    if (stream && localUserId) {
-      const track = stream.getAudioTracks()[0];
-      if (track) track.enabled = false;
-      setupSpeakingDetection(localUserId, stream);
-    }
-  }, [stream, localUserId]);
-
-  useEffect(() => {
-    remoteStreams.forEach(({ id, stream }) => {
-      let audioEl = remoteAudioRefs.current[id];
-      if (!audioEl) {
-        audioEl = document.createElement("audio");
-        audioEl.autoplay = true;
-        audioEl.setAttribute("playsinline", "true");
-        audioEl.className = "hidden";
-        document.body.appendChild(audioEl);
-        remoteAudioRefs.current[id] = audioEl;
-      }
-      if (stream && audioEl.srcObject !== stream) {
-        audioEl.srcObject = stream;
-        audioEl.onloadedmetadata = () => {
-          audioEl.play().catch(console.error);
-        };
-        setupSpeakingDetection(id, stream);
-      }
-    });
-  }, [remoteStreams]);
-
-  useEffect(() => {
-    if (!activeVote) setHasVoted(false);
-  }, [activeVote]);
 
   const setupSpeakingDetection = (userId: string, mediaStream: MediaStream) => {
     if (!audioContextRef.current) {
@@ -103,6 +70,39 @@ export default function RoomPage() {
 
     detect();
   };
+
+  useEffect(() => {
+    if (stream && localUserId) {
+      const track = stream.getAudioTracks()[0];
+      if (track) track.enabled = false;
+      setupSpeakingDetection(localUserId, stream);
+    }
+  }, [stream, localUserId]);
+
+  useEffect(() => {
+    remoteStreams.forEach(({ id, stream }) => {
+      let audioEl = remoteAudioRefs.current[id];
+      if (!audioEl) {
+        audioEl = document.createElement("audio");
+        audioEl.autoplay = true;
+        audioEl.setAttribute("playsinline", "true");
+        audioEl.className = "hidden";
+        document.body.appendChild(audioEl);
+        remoteAudioRefs.current[id] = audioEl;
+      }
+      if (stream && audioEl.srcObject !== stream) {
+        audioEl.srcObject = stream;
+        audioEl.onloadedmetadata = () => {
+          audioEl.play().catch(console.error);
+        };
+        setupSpeakingDetection(id, stream);
+      }
+    });
+  }, [remoteStreams]);
+
+  useEffect(() => {
+    if (!activeVote) setHasVoted(false);
+  }, [activeVote]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -143,11 +143,12 @@ export default function RoomPage() {
     setHasVoted(true);
   };
 
-  const toggleMute = () => {
+  const toggleMic = () => {
     const audioTrack = stream?.getAudioTracks()[0];
     if (audioTrack) {
-      audioTrack.enabled = !audioTrack.enabled;
-      setIsMuted(!audioTrack.enabled);
+      const enabled = !audioTrack.enabled;
+      audioTrack.enabled = enabled;
+      setIsMicMuted(!enabled);
     }
   };
 
@@ -206,10 +207,10 @@ export default function RoomPage() {
           {/* Buttons Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 w-full max-w-3xl">
             <button
-              onClick={toggleMute}
+              onClick={toggleMic}
               className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded text-sm"
             >
-              {isMuted ? `🔇 ${t("unmute")}` : `🎤 ${t("mute")}`}
+              {isMicMuted ? `🔇 ${t("mic-off")}` : `🎤 ${t("mic-on")}`}
             </button>
 
             <button
@@ -217,13 +218,6 @@ export default function RoomPage() {
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
             >
               📁 {t("choose")}
-            </button>
-
-            <button
-              onClick={handleLeaveRoom}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm"
-            >
-              {t("leave")}
             </button>
 
             {localUserId === hostId && !activeVote && (
@@ -234,6 +228,13 @@ export default function RoomPage() {
                 {t("vote.start")}
               </button>
             )}
+
+            <button
+              onClick={handleLeaveRoom}
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm"
+            >
+              {t("leave")}
+            </button>
           </div>
 
           <input
