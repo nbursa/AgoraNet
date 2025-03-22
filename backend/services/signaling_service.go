@@ -75,7 +75,6 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Expect the first message to be "init" with optional userId
 	_, msgBytes, err := conn.ReadMessage()
 	if err != nil {
 		log.Println("❌ Failed to read init message:", err)
@@ -108,7 +107,6 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	log.Println("🔌 Connected:", clientID)
 	log.Println("✅ Initialized client ID:", clientID)
 
-	// Respond to client with assigned ID
 	err = conn.WriteJSON(map[string]interface{}{
 		"type":   "init",
 		"userId": clientID,
@@ -212,6 +210,18 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			}
 			roomLock.Unlock()
 
+		case "speaking":
+			isSpeaking, ok := msg["isSpeaking"].(bool)
+			if !ok {
+				log.Printf("⚠️ Invalid speaking message from %s", clientID)
+				break
+			}
+			broadcastMessage(client.RoomID, map[string]interface{}{
+				"type":       "speaking",
+				"userId":     clientID,
+				"isSpeaking": isSpeaking,
+			})
+
 		default:
 			log.Printf("⚠️ Unknown message type from %s: %v", clientID, msg["type"])
 		}
@@ -240,14 +250,12 @@ func registerClient(roomID string, client *Client) {
 		userList = append(userList, peer.ID)
 	}
 
-	// Send participants to the new client first
 	client.Conn.WriteJSON(map[string]interface{}{
 		"type":   "participants",
 		"users":  userList,
 		"hostId": room.HostID,
 	})
 
-	// Notify all other clients about updated participants
 	for _, peer := range room.Clients {
 		if peer.ID != client.ID {
 			peer.Conn.WriteJSON(map[string]interface{}{

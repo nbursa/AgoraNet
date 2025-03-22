@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { useWebRTC } from "@/hooks/useWebRTC";
@@ -25,6 +25,8 @@ export default function RoomPage() {
     activeVote,
     currentVotes,
     hostId,
+    speakingUsers,
+    sendSpeakingStatus,
   } = useWebRTC(id as string);
 
   const remoteAudioRefs = useRef<Record<string, HTMLAudioElement>>({});
@@ -32,44 +34,41 @@ export default function RoomPage() {
   const [copied, setCopied] = useState(false);
   const [hasVoted, setHasVoted] = useState(false);
   const [isMicMuted, setIsMicMuted] = useState(true);
-  const [speakingUsers, setSpeakingUsers] = useState<Set<string>>(new Set());
 
   const analyserRefs = useRef<Record<string, AnalyserNode>>({});
   const audioContextRef = useRef<AudioContext | null>(null);
 
-  const setupSpeakingDetection = (userId: string, mediaStream: MediaStream) => {
-    if (!audioContextRef.current) {
-      audioContextRef.current = new AudioContext();
-    }
+  const setupSpeakingDetection = useCallback(
+    (userId: string, mediaStream: MediaStream) => {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new AudioContext();
+      }
 
-    const audioContext = audioContextRef.current;
-    const source = audioContext.createMediaStreamSource(mediaStream);
-    const analyser = audioContext.createAnalyser();
-    analyser.fftSize = 512;
-    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      const audioContext = audioContextRef.current;
+      const source = audioContext.createMediaStreamSource(mediaStream);
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 512;
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-    source.connect(analyser);
-    analyserRefs.current[userId] = analyser;
+      source.connect(analyser);
+      analyserRefs.current[userId] = analyser;
 
-    const detect = () => {
-      analyser.getByteFrequencyData(dataArray);
-      const volume = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+      const detect = () => {
+        analyser.getByteFrequencyData(dataArray);
+        const volume = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+        const isSpeaking = volume > 20;
 
-      setSpeakingUsers((prev) => {
-        const updated = new Set(prev);
-        if (volume > 20) {
-          updated.add(userId);
-        } else {
-          updated.delete(userId);
+        if (userId === localUserId) {
+          sendSpeakingStatus(isSpeaking);
         }
-        return new Set(updated);
-      });
 
-      requestAnimationFrame(detect);
-    };
+        requestAnimationFrame(detect);
+      };
 
-    detect();
-  };
+      detect();
+    },
+    [localUserId, sendSpeakingStatus]
+  );
 
   useEffect(() => {
     if (stream && localUserId) {
@@ -77,7 +76,7 @@ export default function RoomPage() {
       if (track) track.enabled = false;
       setupSpeakingDetection(localUserId, stream);
     }
-  }, [stream, localUserId]);
+  }, [stream, localUserId, setupSpeakingDetection]);
 
   useEffect(() => {
     remoteStreams.forEach(({ id, stream }) => {
@@ -98,7 +97,7 @@ export default function RoomPage() {
         setupSpeakingDetection(id, stream);
       }
     });
-  }, [remoteStreams]);
+  }, [remoteStreams, setupSpeakingDetection]);
 
   useEffect(() => {
     if (!activeVote) setHasVoted(false);
@@ -204,7 +203,6 @@ export default function RoomPage() {
             {t("room")} {id}
           </h1>
 
-          {/* Buttons Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 w-full max-w-3xl">
             <button
               onClick={toggleMic}
@@ -245,7 +243,6 @@ export default function RoomPage() {
             className="hidden"
           />
 
-          {/* Shared Media */}
           {sharedMediaUrl && sharedMediaType && (
             <div className="relative mt-6 max-w-3xl w-full text-center">
               <h2 className="text-lg font-semibold mb-2">{t("preview")}</h2>
@@ -288,7 +285,6 @@ export default function RoomPage() {
             </div>
           )}
 
-          {/* Voting Section */}
           {activeVote && (
             <div className="w-full max-w-md text-center mt-8">
               <h2 className="text-xl font-semibold mb-4">

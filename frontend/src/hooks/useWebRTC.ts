@@ -29,14 +29,13 @@ type SignalMessage =
       mediaType: SharedMediaType;
     }
   | { type: "create-vote"; question: string }
-  | { type: "vote"; userId: string; value: "yes" | "no" };
+  | { type: "vote"; userId: string; value: "yes" | "no" }
+  | { type: "speaking"; userId: string; isSpeaking: boolean };
 
 type RemoteStreamEntry = {
   id: string;
   stream: MediaStream;
 };
-
-// let wasInitialized = false;
 
 export function useWebRTC(roomId: string) {
   const router = useRouter();
@@ -52,6 +51,7 @@ export function useWebRTC(roomId: string) {
     Record<string, "yes" | "no">
   >({});
   const [hostId, setHostId] = useState<string | null>(null);
+  const [speakingUsers, setSpeakingUsers] = useState<Set<string>>(new Set());
 
   const socketRef = useRef<WebSocket | null>(null);
   const peersRef = useRef<{ [id: string]: RTCPeerConnection }>({});
@@ -64,6 +64,15 @@ export function useWebRTC(roomId: string) {
       socketRef.current.send(JSON.stringify(msg));
     }
   }, []);
+
+  const sendSpeakingStatus = useCallback(
+    (isSpeaking: boolean) => {
+      if (localUserId) {
+        send({ type: "speaking", userId: localUserId, isSpeaking });
+      }
+    },
+    [send, localUserId]
+  );
 
   const sendSharedMedia = useCallback(
     (url: string | null, mediaType: SharedMediaType = "image") => {
@@ -156,6 +165,7 @@ export function useWebRTC(roomId: string) {
     setActiveVote(null);
     setCurrentVotes({});
     setHostId(null);
+    setSpeakingUsers(new Set());
 
     if (socketRef.current) {
       socketRef.current.close();
@@ -233,6 +243,18 @@ export function useWebRTC(roomId: string) {
               }
               break;
 
+            case "speaking":
+              setSpeakingUsers((prev) => {
+                const updated = new Set(prev);
+                if (message.isSpeaking) {
+                  updated.add(message.userId);
+                } else {
+                  updated.delete(message.userId);
+                }
+                return new Set(updated);
+              });
+              break;
+
             case "offer": {
               const peer =
                 peersRef.current[message.userId] ||
@@ -267,6 +289,11 @@ export function useWebRTC(roomId: string) {
               setParticipants((prev) =>
                 prev.filter((id) => id !== message.userId)
               );
+              setSpeakingUsers((prev) => {
+                const updated = new Set(prev);
+                updated.delete(message.userId);
+                return new Set(updated);
+              });
               break;
           }
         };
@@ -296,5 +323,7 @@ export function useWebRTC(roomId: string) {
     activeVote,
     currentVotes,
     hostId,
+    speakingUsers,
+    sendSpeakingStatus,
   };
 }
