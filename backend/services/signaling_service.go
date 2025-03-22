@@ -21,6 +21,13 @@ type Client struct {
 	RoomID string
 }
 
+type Room struct {
+	Clients      map[string]*Client
+	HostID       string
+	ActiveVote   string
+	CurrentVotes map[string]string
+}
+
 var (
 	upgrader = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
@@ -29,7 +36,7 @@ var (
 	}
 
 	clients  = make(map[string]*Client)
-	rooms    = make(map[string]map[string]*Client)
+	rooms    = make(map[string]*Room)
 	roomLock sync.Mutex
 )
 
@@ -68,12 +75,39 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clientID := uuid.New().String()
+	// Expect the first message to be "init" with optional userId
+	_, msgBytes, err := conn.ReadMessage()
+	if err != nil {
+		log.Println("❌ Failed to read init message:", err)
+		conn.Close()
+		return
+	}
+
+	var initMsg map[string]interface{}
+	if err := json.Unmarshal(msgBytes, &initMsg); err != nil {
+		log.Println("❌ Invalid JSON in init message:", err)
+		conn.Close()
+		return
+	}
+
+	if initMsg["type"] != "init" {
+		log.Println("❌ First message must be 'init'")
+		conn.Close()
+		return
+	}
+
+	providedID, _ := initMsg["userId"].(string)
+	clientID := providedID
+	if clientID == "" {
+		clientID = uuid.New().String()
+	}
+
 	client := &Client{ID: clientID, Conn: conn}
 	clients[clientID] = client
 
 	log.Println("🔌 Connected:", clientID)
 
+	// Respond with init message
 	err = conn.WriteJSON(map[string]interface{}{
 		"type":   "init",
 		"userId": clientID,
@@ -141,6 +175,42 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				"mediaType": mediaType,
 			})
 
+		case "create-vote":
+			question, ok := msg["question"].(string)
+			if !ok {
+				log.Printf("⚠️ Invalid create-vote message from %s", clientID)
+				break
+			}
+			roomLock.Lock()
+			room, ok := rooms[client.RoomID]
+			if ok && client.ID == room.HostID {
+				room.ActiveVote = question
+				room.CurrentVotes = make(map[string]string)
+				broadcastMessage(client.RoomID, map[string]interface{}{
+					"type":     "create-vote",
+					"question": question,
+				})
+			}
+			roomLock.Unlock()
+
+		case "vote":
+			value, ok := msg["value"].(string)
+			if !ok {
+				log.Printf("⚠️ Invalid vote message from %s", clientID)
+				break
+			}
+			roomLock.Lock()
+			room, ok := rooms[client.RoomID]
+			if ok && room.ActiveVote != "" {
+				room.CurrentVotes[clientID] = value
+				broadcastMessage(client.RoomID, map[string]interface{}{
+					"type":   "vote",
+					"userId": clientID,
+					"value":  value,
+				})
+			}
+			roomLock.Unlock()
+
 		default:
 			log.Printf("⚠️ Unknown message type from %s: %v", clientID, msg["type"])
 		}
@@ -151,22 +221,46 @@ func registerClient(roomID string, client *Client) {
 	roomLock.Lock()
 	defer roomLock.Unlock()
 
-	if rooms[roomID] == nil {
-		rooms[roomID] = make(map[string]*Client)
+	room, exists := rooms[roomID]
+	if !exists {
+		room = &Room{
+			Clients:      make(map[string]*Client),
+			HostID:       client.ID,
+			ActiveVote:   "",
+			CurrentVotes: make(map[string]string),
+		}
+		rooms[roomID] = room
 	}
 
-	rooms[roomID][client.ID] = client
+	// Replace old connection if user reconnected
+	room.Clients[client.ID] = client
 
 	userList := []string{}
-	for _, peer := range rooms[roomID] {
+	for _, peer := range room.Clients {
 		userList = append(userList, peer.ID)
 	}
 
-	for _, peer := range rooms[roomID] {
+	for _, peer := range room.Clients {
 		peer.Conn.WriteJSON(map[string]interface{}{
-			"type":  "participants",
-			"users": userList,
+			"type":   "participants",
+			"users":  userList,
+			"hostId": room.HostID,
 		})
+	}
+
+	// Send current vote state to new client
+	if room.ActiveVote != "" {
+		client.Conn.WriteJSON(map[string]interface{}{
+			"type":     "create-vote",
+			"question": room.ActiveVote,
+		})
+		for userId, value := range room.CurrentVotes {
+			client.Conn.WriteJSON(map[string]interface{}{
+				"type":   "vote",
+				"userId": userId,
+				"value":  value,
+			})
+		}
 	}
 }
 
@@ -186,7 +280,12 @@ func broadcastMessage(roomID string, message map[string]interface{}) {
 	roomLock.Lock()
 	defer roomLock.Unlock()
 
-	for _, client := range rooms[roomID] {
+	room, exists := rooms[roomID]
+	if !exists {
+		return
+	}
+
+	for _, client := range room.Clients {
 		err := client.Conn.WriteJSON(message)
 		if err != nil {
 			log.Printf("❌ Failed to broadcast to %s: %v", client.ID, err)
@@ -202,14 +301,16 @@ func removeClient(client *Client) {
 
 	if client.RoomID != "" {
 		if room, ok := rooms[client.RoomID]; ok {
-			delete(room, client.ID)
-			for _, peer := range room {
+			delete(room.Clients, client.ID)
+
+			for _, peer := range room.Clients {
 				peer.Conn.WriteJSON(map[string]interface{}{
 					"type":   "leave",
 					"userId": client.ID,
 				})
 			}
-			if len(room) == 0 {
+
+			if len(room.Clients) == 0 {
 				delete(rooms, client.RoomID)
 			}
 		}
