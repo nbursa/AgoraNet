@@ -106,8 +106,9 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	clients[clientID] = client
 
 	log.Println("🔌 Connected:", clientID)
+	log.Println("✅ Initialized client ID:", clientID)
 
-	// Respond with init message
+	// Respond to client with assigned ID
 	err = conn.WriteJSON(map[string]interface{}{
 		"type":   "init",
 		"userId": clientID,
@@ -232,7 +233,6 @@ func registerClient(roomID string, client *Client) {
 		rooms[roomID] = room
 	}
 
-	// Replace old connection if user reconnected
 	room.Clients[client.ID] = client
 
 	userList := []string{}
@@ -240,15 +240,24 @@ func registerClient(roomID string, client *Client) {
 		userList = append(userList, peer.ID)
 	}
 
+	// Send participants to the new client first
+	client.Conn.WriteJSON(map[string]interface{}{
+		"type":   "participants",
+		"users":  userList,
+		"hostId": room.HostID,
+	})
+
+	// Notify all other clients about updated participants
 	for _, peer := range room.Clients {
-		peer.Conn.WriteJSON(map[string]interface{}{
-			"type":   "participants",
-			"users":  userList,
-			"hostId": room.HostID,
-		})
+		if peer.ID != client.ID {
+			peer.Conn.WriteJSON(map[string]interface{}{
+				"type":   "participants",
+				"users":  userList,
+				"hostId": room.HostID,
+			})
+		}
 	}
 
-	// Send current vote state to new client
 	if room.ActiveVote != "" {
 		client.Conn.WriteJSON(map[string]interface{}{
 			"type":     "create-vote",
