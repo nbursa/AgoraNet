@@ -115,6 +115,9 @@
     "close": "Close",
     "download": "Download",
     "leave": "Leave Room",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "loading": "Loading",
     "vote": {
       "title": "Voting",
       "start": "Start Voting",

@@ -36,7 +36,7 @@ type RemoteStreamEntry = {
   stream: MediaStream;
 };
 
-let wasInitialized = false;
+// let wasInitialized = false;
 
 export function useWebRTC(roomId: string) {
   const router = useRouter();
@@ -57,6 +57,7 @@ export function useWebRTC(roomId: string) {
   const peersRef = useRef<{ [id: string]: RTCPeerConnection }>({});
   const userIdRef = useRef<string | null>(null);
   const isJoiningRef = useRef(false);
+  const initializedRef = useRef(false);
 
   const send = useCallback((msg: SignalMessage) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) {
@@ -169,8 +170,8 @@ export function useWebRTC(roomId: string) {
   }, [send, router]);
 
   useEffect(() => {
-    if (wasInitialized) return;
-    wasInitialized = true;
+    if (initializedRef.current) return;
+    initializedRef.current = true;
 
     const connect = async () => {
       try {
@@ -202,7 +203,9 @@ export function useWebRTC(roomId: string) {
 
             case "participants":
               setParticipants(message.users);
-              if ("hostId" in message) setHostId(message.hostId);
+              if (typeof message.hostId === "string") {
+                setHostId(message.hostId);
+              }
               break;
 
             case "user-joined":

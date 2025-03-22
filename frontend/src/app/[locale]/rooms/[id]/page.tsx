@@ -27,19 +27,26 @@ export default function RoomPage() {
     hostId,
   } = useWebRTC(id as string);
 
-  const localAudioRef = useRef<HTMLAudioElement>(null);
   const remoteAudioRefs = useRef<
     Record<string, React.RefObject<HTMLAudioElement | null>>
   >({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [copied, setCopied] = useState(false);
   const [hasVoted, setHasVoted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+  const [speakingUsers, setSpeakingUsers] = useState<Set<string>>(new Set());
+
+  // Audio analysis map
+  const analyserRefs = useRef<Record<string, AnalyserNode>>({});
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   useEffect(() => {
-    if (localAudioRef.current && stream) {
-      localAudioRef.current.srcObject = stream;
+    if (stream && localUserId) {
+      const track = stream.getAudioTracks()[0];
+      if (track) track.enabled = false;
+      setupSpeakingDetection(localUserId, stream);
     }
-  }, [stream]);
+  }, [stream, localUserId]);
 
   useEffect(() => {
     remoteStreams.forEach(({ id, stream }) => {
@@ -49,6 +56,7 @@ export default function RoomPage() {
       const ref = remoteAudioRefs.current[id];
       if (ref.current) {
         ref.current.srcObject = stream;
+        setupSpeakingDetection(id, stream);
       }
     });
   }, [remoteStreams]);
@@ -56,6 +64,40 @@ export default function RoomPage() {
   useEffect(() => {
     if (!activeVote) setHasVoted(false);
   }, [activeVote]);
+
+  const setupSpeakingDetection = (userId: string, mediaStream: MediaStream) => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new AudioContext();
+    }
+
+    const audioContext = audioContextRef.current;
+    const source = audioContext.createMediaStreamSource(mediaStream);
+    const analyser = audioContext.createAnalyser();
+    analyser.fftSize = 512;
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+    source.connect(analyser);
+    analyserRefs.current[userId] = analyser;
+
+    const detect = () => {
+      analyser.getByteFrequencyData(dataArray);
+      const volume = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+
+      setSpeakingUsers((prev) => {
+        const updated = new Set(prev);
+        if (volume > 30) {
+          updated.add(userId);
+        } else {
+          updated.delete(userId);
+        }
+        return new Set(updated);
+      });
+
+      requestAnimationFrame(detect);
+    };
+
+    detect();
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -96,6 +138,22 @@ export default function RoomPage() {
     setHasVoted(true);
   };
 
+  const toggleMute = () => {
+    const audioTrack = stream?.getAudioTracks()[0];
+    if (audioTrack) {
+      audioTrack.enabled = !audioTrack.enabled;
+      setIsMuted(!audioTrack.enabled);
+    }
+  };
+
+  if (!localUserId) {
+    return (
+      <div className="flex items-center justify-center w-full h-full text-white bg-black">
+        <span className="animate-pulse text-lg">{t("loading")}...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-row w-full h-full overflow-hidden">
       <aside className="w-64 h-full bg-gray-900 text-white p-4 border-r border-gray-700 flex flex-col">
@@ -107,22 +165,30 @@ export default function RoomPage() {
         </button>
         <div className="flex-1 overflow-y-auto pr-1">
           <ul className="space-y-2 text-sm font-mono">
-            {participants.map((uid) => (
-              <li
-                key={uid}
-                className={
-                  uid === localUserId ? "text-green-400" : "text-white"
-                }
-              >
-                {uid === localUserId
-                  ? uid === hostId
-                    ? `${t("you")} (${t("host")})`
-                    : `${t("you")} (${t("guest")})`
-                  : uid === hostId
-                  ? `${t("host")} (${uid})`
-                  : `${t("guest")} (${uid})`}
-              </li>
-            ))}
+            {localUserId &&
+              participants.map((uid) => (
+                <li
+                  key={uid}
+                  className={`flex items-center gap-2 ${
+                    uid === localUserId ? "text-green-400" : "text-white"
+                  }`}
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      speakingUsers.has(uid)
+                        ? "bg-green-500 animate-ping"
+                        : "bg-gray-600"
+                    }`}
+                  />
+                  {uid === localUserId
+                    ? uid === hostId
+                      ? `${t("you")} (${t("host")})`
+                      : `${t("you")} (${t("guest")})`
+                    : uid === hostId
+                    ? `${t("host")} (${uid})`
+                    : `${t("guest")} (${uid})`}
+                </li>
+              ))}
           </ul>
         </div>
       </aside>
@@ -135,7 +201,12 @@ export default function RoomPage() {
 
           <div className="mb-6 text-center">
             <h2 className="text-lg font-semibold">{t("mic")}</h2>
-            <audio autoPlay controls ref={localAudioRef} className="mt-2" />
+            <button
+              onClick={toggleMute}
+              className="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700 mt-2"
+            >
+              {isMuted ? `🔇 ${t("unmute")}` : `🎤 ${t("mute")}`}
+            </button>
           </div>
 
           <div className="mb-6 text-center">
@@ -197,10 +268,9 @@ export default function RoomPage() {
             </div>
           )}
 
-          {/* Voting */}
           <div className="mb-8 w-full max-w-md text-center">
             <h2 className="text-xl font-semibold mb-2">🗳️ {t("vote.title")}</h2>
-            {!activeVote && localUserId === hostId && (
+            {localUserId && hostId && localUserId === hostId && !activeVote && (
               <button
                 onClick={() => createVote("yes-no")}
                 className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
@@ -208,6 +278,7 @@ export default function RoomPage() {
                 {t("vote.start")}
               </button>
             )}
+
             {activeVote && (
               <div className="mt-4 space-y-4">
                 {!hasVoted && (

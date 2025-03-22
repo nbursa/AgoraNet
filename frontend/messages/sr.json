@@ -115,6 +115,9 @@
     "close": "Zatvori",
     "download": "Preuzmi",
     "leave": "Napusti sobu",
+    "mute": "Isključi zvuk",
+    "unmute": "Uključi zvuk",
+    "loading": "Učitavanje",
     "vote": {
       "title": "Glasanje",
       "start": "Započni glasanje",
