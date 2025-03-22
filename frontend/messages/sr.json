@@ -1,0 +1,111 @@
+{
+  "common": {
+    "title": "Decentralizovani Plenum",
+    "rooms": "Sobe",
+    "dashboard": "Kontrolna tabla",
+    "about": "O nama",
+    "login": "Prijava",
+    "logout": "Odjava"
+  },
+  "home": {
+    "title": "Decentralizovani Plenum",
+    "description": "Sigurni, decentralizovani sastanci i diskusije",
+    "viewRooms": "Pogledaj Aktivne Sobe",
+    "createRoom": "Kreiraj Novu Sobu",
+    "loginRequired": "Morate biti prijavljeni da biste pristupili sobama.",
+    "loginBtn": "Prijava / Registracija"
+  },
+  "about": {
+    "title": "O Decentralizovanom Plenumu",
+    "description": {
+      "part1": "Decentralizovani Plenum je bezbedna, na cenzuru otporna platforma za",
+      "strong": "glasovne diskusije i kolektivno donošenje odluka",
+      "part2": ". Omogućava zajednicama, aktivistima i pojedincima da učestvuju u slobodnim, anonimnim i demokratskim diskusijama."
+    },
+    "features": {
+      "title": "Ključne funkcije",
+      "items": [
+        "Diskusione sobe u realnom vremenu - korišćenjem P2P WebRTC tehnologije",
+        "Decentralizovano i otporno na cenzuru",
+        "Bez registracije - potpuna anonimnost",
+        "Ugrađen sistem glasanja - za odlučivanje",
+        "Mogućnost samostalnog hostovanja ili korišćenja javne instance"
+      ]
+    },
+    "howItWorks": {
+      "title": "Kako funkcioniše",
+      "text": "Korisnici mogu kreirati bezbedne glasovne diskusione sobe, pozvati učesnike i po potrebi sprovesti glasanja unutar platforme. Sistem je dizajniran da funkcioniše bez centralne vlasti, garantujući privatnost i slobodu govora."
+    },
+    "getInvolved": {
+      "title": "Uključi se",
+      "text": "Ovaj projekat je otvorenog koda i svi su dobrodošli da doprinesu! Možete pogledati izvorni kod, prijaviti probleme i predložiti nove funkcije."
+    },
+    "backToHome": "Nazad na početnu"
+  },
+  "login": {
+    "title": "Prijava",
+    "username": "Korisničko ime",
+    "password": "Lozinka",
+    "show": "Prikaži",
+    "hide": "Sakrij",
+    "cancel": "Otkaži",
+    "loginBtn": "Prijavi se",
+    "error": "Neispravni podaci",
+    "noAccount": "Nemate nalog?",
+    "registerHere": "Registrujte se ovde"
+  },
+  "register": {
+    "title": "Kreiraj Nalog",
+    "setAvatar": "Postavi Avatar",
+    "username": "Korisničko ime",
+    "password": "Lozinka",
+    "confirm": "Potvrdi Lozinku",
+    "show": "Prikaži",
+    "hide": "Sakrij",
+    "cancel": "Otkaži",
+    "registerBtn": "Registruj se",
+    "haveAccount": "Već imaš nalog?",
+    "loginHere": "Prijavi se ovde",
+    "mismatch": "Lozinke se ne poklapaju",
+    "error": "Registracija nije uspela. Pokušaj ponovo."
+  },
+  "dashboard": {
+    "title": "Kontrolna tabla",
+    "description": "Dobrodošli na vašu decentralizovanu kontrolnu tablu. Ovde možete pratiti sobe, glasanja, deljene fajlove i upravljati svojim prisustvom u plenumu.",
+    "rooms": {
+      "title": "Aktivne Sobe",
+      "description": "Imate 3 tekuće diskusije."
+    },
+    "votes": {
+      "title": "Nedavna Glasanja",
+      "description": "Dostupna su 2 nova rezultata."
+    },
+    "files": {
+      "title": "Deljeni Fajlovi",
+      "description": "5 novih dokumenata je podeljeno ove nedelje."
+    }
+  },
+  "rooms": {
+    "title": "Aktivne Sobe",
+    "description": "Upravljajte vašim prostorima za diskusiju",
+    "create": "Kreiraj novu sobu",
+    "available": "Dostupne sobe",
+    "delete": "Obriši",
+    "noRooms": "Nema aktivnih soba"
+  },
+  "room": {
+    "copy": "📋 Kopiraj link sobe",
+    "copied": "✅ Kopirano!",
+    "you": "🟢 Ti",
+    "host": "👑 Domaćin",
+    "guest": "🔉 Gost",
+    "room": "Soba",
+    "mic": "🎙️ Vaš mikrofon",
+    "share": "📤 Podeli dokument",
+    "choose": "Izaberi fajl",
+    "preview": "📎 Pregled deljenog sadržaja",
+    "close": "Zatvori",
+    "download": "Preuzmi",
+    "leave": "Napusti sobu"
+  }
+}

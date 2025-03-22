@@ -4,8 +4,10 @@ import React, { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { useWebRTC } from "@/hooks/useWebRTC";
+import { useTranslations } from "next-intl";
 
 export default function RoomPage() {
+  const t = useTranslations("room");
   const { id } = useParams();
   const router = useRouter();
 
@@ -87,13 +89,12 @@ export default function RoomPage() {
 
   return (
     <div className="flex flex-row w-full h-full overflow-hidden">
-      {/* Sidebar */}
       <aside className="w-64 h-full bg-gray-900 text-white p-4 border-r border-gray-700 flex flex-col">
         <button
           onClick={handleCopyRoomUrl}
           className="mb-4 w-full bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm"
         >
-          {copied ? "✅ Copied!" : "📋 Copy Room URL"}
+          {copied ? t("copied") : t("copy")}
         </button>
 
         <div className="flex-1 overflow-y-auto pr-1">
@@ -106,35 +107,34 @@ export default function RoomPage() {
                 }
               >
                 {uid === localUserId
-                  ? `🟢 You (${uid})`
+                  ? `${t("you")} (${uid})`
                   : index === 0
-                  ? `👑 Host (${uid})`
-                  : `🔉 Guest (${uid})`}
+                  ? `${t("host")} (${uid})`
+                  : `${t("guest")} (${uid})`}
               </li>
             ))}
           </ul>
         </div>
       </aside>
 
-      {/* Main Area */}
       <main className="flex-1 overflow-y-auto">
         <div className="flex flex-col items-center justify-center min-h-full py-10 px-6">
-          <h1 className="text-2xl font-bold mb-6">Room {id}</h1>
+          <h1 className="text-2xl font-bold mb-6">
+            {t("room")} {id}
+          </h1>
 
-          {/* Local Audio */}
           <div className="mb-6 text-center">
-            <h2 className="text-lg font-semibold">🎙️ Your Microphone</h2>
+            <h2 className="text-lg font-semibold">{t("mic")}</h2>
             <audio autoPlay controls ref={localAudioRef} className="mt-2" />
           </div>
 
-          {/* Upload Button */}
           <div className="mb-6 text-center">
-            <h2 className="text-lg font-semibold mb-2">📤 Share Document</h2>
+            <h2 className="text-lg font-semibold mb-2">{t("share")}</h2>
             <button
               onClick={triggerFileSelect}
               className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
             >
-              📁 Choose File
+              📁 {t("choose")}
             </button>
             <input
               ref={fileInputRef}
@@ -145,10 +145,9 @@ export default function RoomPage() {
             />
           </div>
 
-          {/* Preview */}
           {sharedMediaUrl && sharedMediaType && (
             <div className="mb-6 text-center relative">
-              <h2 className="text-lg font-semibold">📎 Shared Preview</h2>
+              <h2 className="text-lg font-semibold">{t("preview")}</h2>
               <div className="relative inline-block">
                 {sharedMediaType === "pdf" ? (
                   <iframe
@@ -173,7 +172,7 @@ export default function RoomPage() {
                     onClick={handleClearMedia}
                     className="absolute top-2 right-2 bg-black bg-opacity-70 text-white px-3 py-1 rounded hover:bg-opacity-90"
                   >
-                    ✖ Close
+                    ✖ {t("close")}
                   </button>
                 )}
 
@@ -184,13 +183,12 @@ export default function RoomPage() {
                   }`}
                   className="absolute bottom-2 right-2 bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
                 >
-                  ⬇ Download
+                  ⬇ {t("download")}
                 </a>
               </div>
             </div>
           )}
 
-          {/* Remote Audios */}
           {remoteStreams.map((entry) => {
             if (!remoteAudioRefs.current[entry.id]) {
               remoteAudioRefs.current[entry.id] =
@@ -207,12 +205,11 @@ export default function RoomPage() {
             );
           })}
 
-          {/* Leave */}
           <button
             onClick={handleLeaveRoom}
             className="mt-10 bg-red-600 text-white px-6 py-2 w-48 rounded-md hover:bg-red-700"
           >
-            Leave Room
+            {t("leave")}
           </button>
         </div>
       </main>
