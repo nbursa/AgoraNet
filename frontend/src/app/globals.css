@@ -14,6 +14,10 @@
   }
 }
 
+html {
+  box-sizing: border-box;
+}
+
 html,
 body {
   height: 100%;
@@ -29,6 +33,7 @@ body {
 }
 
 body {
+  position: relative;
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), sans-serif;
@@ -42,6 +47,10 @@ body {
 *::before,
 *::after {
   box-sizing: inherit;
+}
+
+button {
+  width: auto;
 }
 
 button:hover {

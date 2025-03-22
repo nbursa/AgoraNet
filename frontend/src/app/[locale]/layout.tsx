@@ -27,6 +27,8 @@ export default async function LocaleLayout(props: {
       style={{
         height: "100%",
         minHeight: "100vh",
+        WebkitOverflowScrolling: "touch",
+        position: "relative",
       }}
     >
       <body
@@ -37,6 +39,7 @@ export default async function LocaleLayout(props: {
           height: "100%",
           minHeight: "100vh",
           width: "100%",
+          position: "relative",
           WebkitTextSizeAdjust: "100%",
         }}
       >
