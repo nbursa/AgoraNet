@@ -21,7 +21,7 @@ export default function LoginPage() {
       if (!response.token) throw new Error("No token");
       localStorage.setItem("token", response.token);
       setError("");
-      router.push(`/${locale}/dashboard`);
+      router.push(`/${locale}/rooms`);
     } catch (err) {
       console.error("Login failed:", err);
       setError(t("error"));
