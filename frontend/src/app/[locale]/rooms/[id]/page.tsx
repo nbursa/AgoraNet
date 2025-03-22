@@ -56,10 +56,13 @@ export default function RoomPage() {
       const detect = () => {
         analyser.getByteFrequencyData(dataArray);
         const volume = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-        const isSpeaking = volume > 20;
+        const isSpeaking = volume > 5;
+
+        const audioTrack = mediaStream.getAudioTracks()[0];
+        const isMicEnabled = audioTrack?.enabled;
 
         if (userId === localUserId) {
-          sendSpeakingStatus(isSpeaking);
+          sendSpeakingStatus(isMicEnabled && isSpeaking);
         }
 
         requestAnimationFrame(detect);
@@ -72,8 +75,9 @@ export default function RoomPage() {
 
   useEffect(() => {
     if (stream && localUserId) {
-      const track = stream.getAudioTracks()[0];
-      if (track) track.enabled = false;
+      const audioTrack = stream.getAudioTracks()[0];
+      if (audioTrack) audioTrack.enabled = false;
+      setIsMicMuted(true);
       setupSpeakingDetection(localUserId, stream);
     }
   }, [stream, localUserId, setupSpeakingDetection]);
