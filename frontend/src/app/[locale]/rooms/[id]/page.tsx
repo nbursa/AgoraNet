@@ -26,6 +26,7 @@ export default function RoomPage() {
     currentVotes,
     hostId,
     speakingUsers,
+    setSpeakingUsers,
     sendSpeakingStatus,
   } = useWebRTC(id as string);
 
@@ -39,7 +40,7 @@ export default function RoomPage() {
   const audioContextRef = useRef<AudioContext | null>(null);
 
   const setupSpeakingDetection = useCallback(
-    (userId: string, mediaStream: MediaStream) => {
+    (userId: string, mediaStream: MediaStream, isLocal: boolean) => {
       if (!audioContextRef.current) {
         audioContextRef.current = new AudioContext();
       }
@@ -58,11 +59,17 @@ export default function RoomPage() {
         const volume = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
         const isSpeaking = volume > 5;
 
-        const audioTrack = mediaStream.getAudioTracks()[0];
-        const isMicEnabled = audioTrack?.enabled;
-
-        if (userId === localUserId) {
+        if (isLocal) {
+          const audioTrack = mediaStream.getAudioTracks()[0];
+          const isMicEnabled = audioTrack?.enabled;
           sendSpeakingStatus(isMicEnabled && isSpeaking);
+        } else {
+          // Fallback if remote doesn't send status
+          if (isSpeaking) {
+            window.dispatchEvent(
+              new CustomEvent("remote-speaking", { detail: { userId } })
+            );
+          }
         }
 
         requestAnimationFrame(detect);
@@ -70,7 +77,7 @@ export default function RoomPage() {
 
       detect();
     },
-    [localUserId, sendSpeakingStatus]
+    [sendSpeakingStatus]
   );
 
   useEffect(() => {
@@ -78,7 +85,7 @@ export default function RoomPage() {
       const audioTrack = stream.getAudioTracks()[0];
       if (audioTrack) audioTrack.enabled = false;
       setIsMicMuted(true);
-      setupSpeakingDetection(localUserId, stream);
+      setupSpeakingDetection(localUserId, stream, true);
     }
   }, [stream, localUserId, setupSpeakingDetection]);
 
@@ -98,10 +105,28 @@ export default function RoomPage() {
         audioEl.onloadedmetadata = () => {
           audioEl.play().catch(console.error);
         };
-        setupSpeakingDetection(id, stream);
+        setupSpeakingDetection(id, stream, false);
       }
     });
   }, [remoteStreams, setupSpeakingDetection]);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { userId } = (e as CustomEvent).detail;
+      if (userId) {
+        setSpeakingUsers((prev) => new Set(prev).add(userId));
+        setTimeout(() => {
+          setSpeakingUsers((prev) => {
+            const updated = new Set(prev);
+            updated.delete(userId);
+            return updated;
+          });
+        }, 500);
+      }
+    };
+    window.addEventListener("remote-speaking", handler);
+    return () => window.removeEventListener("remote-speaking", handler);
+  }, [setSpeakingUsers]);
 
   useEffect(() => {
     if (!activeVote) setHasVoted(false);
@@ -193,8 +218,8 @@ export default function RoomPage() {
                     ? `${t("you")} (${t("host")})`
                     : `${t("you")} (${t("guest")})`
                   : uid === hostId
-                  ? `${t("host")} (${uid})`
-                  : `${t("guest")} (${uid})`}
+                  ? `${t("host")} (${uid.slice(0, 6)})`
+                  : `${t("guest")} (${uid.slice(0, 6)})`}
               </li>
             ))}
           </ul>

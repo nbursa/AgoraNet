@@ -324,6 +324,7 @@ export function useWebRTC(roomId: string) {
     currentVotes,
     hostId,
     speakingUsers,
+    setSpeakingUsers,
     sendSpeakingStatus,
   };
 }
