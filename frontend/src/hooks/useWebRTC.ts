@@ -28,7 +28,8 @@ type SignalMessage =
       url: string;
       mediaType: SharedMediaType;
     }
-  | { type: "create-vote"; question: string }
+  // | { type: "create-vote"; question: string }
+  | { type: "create-vote"; question: string; userId?: string }
   | { type: "vote"; userId: string; value: "yes" | "no" }
   | { type: "speaking"; userId: string; isSpeaking: boolean };
 
@@ -60,8 +61,18 @@ export function useWebRTC(roomId: string) {
   const initializedRef = useRef(false);
 
   const send = useCallback((msg: SignalMessage) => {
-    if (socketRef.current?.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify(msg));
+    const json = JSON.stringify(msg);
+    const ws = socketRef.current;
+    if (ws?.readyState === WebSocket.OPEN) {
+      console.log("📡 Sending to server:", json);
+      ws.send(json);
+    } else {
+      console.warn(
+        "❌ WebSocket is not open. Cannot send:",
+        json,
+        "State:",
+        ws?.readyState
+      );
     }
   }, []);
 
@@ -83,17 +94,24 @@ export function useWebRTC(roomId: string) {
 
   const createVote = useCallback(
     (question: string) => {
-      if (localUserId === hostId) {
-        send({ type: "create-vote", question });
+      if (localUserId === hostId && localUserId && !activeVote) {
+        console.log("🧠 Host creating vote:", question);
+        send({ type: "create-vote", question, userId: localUserId });
+
+        setActiveVote(question);
+        setCurrentVotes({});
       }
     },
-    [send, localUserId, hostId]
+    [send, localUserId, hostId, activeVote]
   );
 
   const vote = useCallback(
     (value: "yes" | "no") => {
       if (localUserId && activeVote) {
+        console.log("📡 vote(): sending to server", value);
         send({ type: "vote", userId: localUserId, value });
+      } else {
+        console.warn("❌ vote(): missing localUserId or activeVote");
       }
     },
     [send, localUserId, activeVote]
@@ -230,8 +248,16 @@ export function useWebRTC(roomId: string) {
               break;
 
             case "create-vote":
-              setActiveVote(message.question);
-              setCurrentVotes({});
+              if (
+                "question" in message &&
+                typeof message.question === "string"
+              ) {
+                console.log("🔥 Vote created:", message.question);
+                setActiveVote(message.question);
+                setCurrentVotes({});
+              } else {
+                console.warn("⚠️ Received create-vote without question");
+              }
               break;
 
             case "vote":
@@ -296,6 +322,14 @@ export function useWebRTC(roomId: string) {
               });
               break;
           }
+        };
+
+        socket.onclose = (event) => {
+          console.warn("🛑 WebSocket closed:", event);
+        };
+
+        socket.onerror = (err) => {
+          console.error("🔥 WebSocket error:", err);
         };
       } catch (err) {
         console.error("❌ Failed to connect:", err);

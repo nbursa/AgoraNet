@@ -175,39 +175,56 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				"mediaType": mediaType,
 			})
 
-		case "create-vote":
-			question, ok := msg["question"].(string)
-			if !ok {
-				log.Printf("⚠️ Invalid create-vote message from %s", clientID)
-				break
-			}
-			roomLock.Lock()
-			room, ok := rooms[client.RoomID]
-			if ok && client.ID == room.HostID {
+	case "create-vote":
+		question, ok := msg["question"].(string)
+		if !ok {
+			log.Printf("⚠️ Invalid create-vote message from %s", clientID)
+			break
+		}
+		roomLock.Lock()
+		room, exists := rooms[client.RoomID]
+		if exists {
+			if room.HostID == client.ID {
+				log.Printf("✅ Host %s creating vote in room %s: %s", clientID, client.RoomID, question)
 				room.ActiveVote = question
 				room.CurrentVotes = make(map[string]string)
 				broadcastMessage(client.RoomID, map[string]interface{}{
 					"type":     "create-vote",
 					"question": question,
 				})
+			} else {
+				log.Printf("⚠️ User %s is not host, cannot create vote", clientID)
 			}
-			roomLock.Unlock()
+		} else {
+			log.Printf("⚠️ Room not found for create-vote: %s", client.RoomID)
+		}
+		roomLock.Unlock()
 
 		case "vote":
 			value, ok := msg["value"].(string)
 			if !ok {
-				log.Printf("⚠️ Invalid vote message from %s", clientID)
+				log.Printf("⚠️ Invalid vote message from %s: missing value", clientID)
 				break
 			}
+		
+			userID, ok := msg["userId"].(string)
+			if !ok {
+				log.Printf("⚠️ Invalid vote message from %s: missing userId", clientID)
+				break
+			}
+		
 			roomLock.Lock()
 			room, ok := rooms[client.RoomID]
 			if ok && room.ActiveVote != "" {
-				room.CurrentVotes[clientID] = value
+				log.Printf("✅ Received vote from %s in room %s: %s", userID, client.RoomID, value)
+				room.CurrentVotes[userID] = value
 				broadcastMessage(client.RoomID, map[string]interface{}{
 					"type":   "vote",
-					"userId": clientID,
+					"userId": userID,
 					"value":  value,
 				})
+			} else {
+				log.Printf("⚠️ Vote rejected for %s: no active vote in room %s", userID, client.RoomID)
 			}
 			roomLock.Unlock()
 

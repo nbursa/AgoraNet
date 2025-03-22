@@ -39,6 +39,15 @@ export default function RoomPage() {
   const analyserRefs = useRef<Record<string, AnalyserNode>>({});
   const audioContextRef = useRef<AudioContext | null>(null);
 
+  const [voteCreated, setVoteCreated] = useState(false);
+
+  const handleCreateVote = () => {
+    if (!voteCreated && !activeVote) {
+      createVote("yes-no");
+      setVoteCreated(true);
+    }
+  };
+
   const setupSpeakingDetection = useCallback(
     (userId: string, mediaStream: MediaStream, isLocal: boolean) => {
       if (!audioContextRef.current) {
@@ -54,6 +63,8 @@ export default function RoomPage() {
       source.connect(analyser);
       analyserRefs.current[userId] = analyser;
 
+      let prevSpeaking = false;
+
       const detect = () => {
         analyser.getByteFrequencyData(dataArray);
         const volume = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
@@ -62,13 +73,21 @@ export default function RoomPage() {
         if (isLocal) {
           const audioTrack = mediaStream.getAudioTracks()[0];
           const isMicEnabled = audioTrack?.enabled;
-          sendSpeakingStatus(isMicEnabled && isSpeaking);
+
+          const finalSpeaking = isMicEnabled && isSpeaking;
+
+          if (finalSpeaking !== prevSpeaking) {
+            sendSpeakingStatus(finalSpeaking);
+            prevSpeaking = finalSpeaking;
+          }
         } else {
-          // Fallback if remote doesn't send status
-          if (isSpeaking) {
+          if (isSpeaking && !prevSpeaking) {
             window.dispatchEvent(
               new CustomEvent("remote-speaking", { detail: { userId } })
             );
+            prevSpeaking = true;
+          } else if (!isSpeaking && prevSpeaking) {
+            prevSpeaking = false;
           }
         }
 
@@ -129,7 +148,9 @@ export default function RoomPage() {
   }, [setSpeakingUsers]);
 
   useEffect(() => {
-    if (!activeVote) setHasVoted(false);
+    if (!activeVote) {
+      setHasVoted(false);
+    }
   }, [activeVote]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -167,6 +188,14 @@ export default function RoomPage() {
   };
 
   const handleVote = (val: "yes" | "no") => {
+    console.log(
+      "📤 Sending vote from",
+      localUserId,
+      "value:",
+      val,
+      "activeVote:",
+      activeVote
+    );
     vote(val);
     setHasVoted(true);
   };
@@ -249,7 +278,7 @@ export default function RoomPage() {
 
             {localUserId === hostId && !activeVote && (
               <button
-                onClick={() => createVote("yes-no")}
+                onClick={handleCreateVote}
                 className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm col-span-2 sm:col-span-1"
               >
                 {t("vote.start")}
