@@ -37,6 +37,7 @@ var (
 
 	clients  = make(map[string]*Client)
 	rooms    = make(map[string]*Room)
+	roomLastMedia = make(map[string]map[string]interface{})
 	roomLock sync.Mutex
 )
 
@@ -250,22 +251,19 @@ func registerClient(roomID string, client *Client) {
 		userList = append(userList, peer.ID)
 	}
 
+	// Send full room state to the newly joined client
 	client.Conn.WriteJSON(map[string]interface{}{
 		"type":   "participants",
 		"users":  userList,
 		"hostId": room.HostID,
 	})
 
-	for _, peer := range room.Clients {
-		if peer.ID != client.ID {
-			peer.Conn.WriteJSON(map[string]interface{}{
-				"type":   "participants",
-				"users":  userList,
-				"hostId": room.HostID,
-			})
-		}
+	// Resend shared media if available
+	if mediaMsg, ok := roomLastMedia[roomID]; ok {
+		client.Conn.WriteJSON(mediaMsg)
 	}
 
+	// Send voting state
 	if room.ActiveVote != "" {
 		client.Conn.WriteJSON(map[string]interface{}{
 			"type":     "create-vote",
@@ -276,6 +274,17 @@ func registerClient(roomID string, client *Client) {
 				"type":   "vote",
 				"userId": userId,
 				"value":  value,
+			})
+		}
+	}
+
+	// Notify all other users about updated participant list
+	for _, peer := range room.Clients {
+		if peer.ID != client.ID {
+			peer.Conn.WriteJSON(map[string]interface{}{
+				"type":   "participants",
+				"users":  userList,
+				"hostId": room.HostID,
 			})
 		}
 	}
@@ -296,6 +305,11 @@ func forwardMessage(targetID string, msg map[string]interface{}) {
 func broadcastMessage(roomID string, message map[string]interface{}) {
 	roomLock.Lock()
 	defer roomLock.Unlock()
+
+	// Save shared media
+	if message["type"] == "shared-media" {
+		roomLastMedia[roomID] = message
+	}
 
 	room, exists := rooms[roomID]
 	if !exists {
