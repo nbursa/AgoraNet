@@ -22,11 +22,13 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-black text-white px-4 py-2 flex justify-between items-center text-sm">
+    <header className="bg-black text-white px-4 py-3 md:py-2 flex justify-between items-center text-sm">
       <Link href="/" className="hover:text-gray-300 font-bold text-lg">
         {t("title")}
       </Link>
-      <nav className="flex items-center gap-2">
+
+      {/* Hide nav on mobile */}
+      <nav className="hidden md:flex items-center gap-2">
         <Link href="/rooms" className="hover:text-gray-300">
           {t("rooms")}
         </Link>

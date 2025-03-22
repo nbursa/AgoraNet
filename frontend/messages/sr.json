@@ -7,6 +7,14 @@
     "login": "Prijava",
     "logout": "Odjava"
   },
+  "navigation": {
+    "home": "Početna",
+    "rooms": "Sobe",
+    "dashboard": "Kontrolna tabla",
+    "about": "O nama",
+    "login": "Prijavi se",
+    "logout": "Odjavi se"
+  },
   "home": {
     "title": "Decentralizovani Plenum",
     "description": "Sigurni, decentralizovani sastanci i diskusije",

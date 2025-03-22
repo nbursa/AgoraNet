@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import MobileSidebar from "@/components/MobileSidebar";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({
@@ -41,6 +42,7 @@ export default async function LocaleLayout(props: {
       >
         <NextIntlClientProvider locale={locale} messages={messages}>
           <Header />
+          <MobileSidebar />
           <main
             className="flex-1 w-full bg-gradient-to-b from-black to-gray-900 overflow-y-auto"
             style={{

@@ -7,6 +7,14 @@
     "login": "Login",
     "logout": "Logout"
   },
+  "navigation": {
+    "home": "Home",
+    "rooms": "Rooms",
+    "dashboard": "Dashboard",
+    "about": "About",
+    "login": "Login",
+    "logout": "Logout"
+  },
   "home": {
     "title": "Decentralized Plenum",
     "description": "Secure, decentralized meetings & discussions",
