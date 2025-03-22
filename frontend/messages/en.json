@@ -114,6 +114,12 @@
     "preview": "📎 Shared Preview",
     "close": "Close",
     "download": "Download",
-    "leave": "Leave Room"
+    "leave": "Leave Room",
+    "vote": {
+      "title": "Voting",
+      "start": "Start Voting",
+      "yes": "Yes",
+      "no": "No"
+    }
   }
 }

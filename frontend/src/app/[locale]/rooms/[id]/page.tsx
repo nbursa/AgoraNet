@@ -20,6 +20,11 @@ export default function RoomPage() {
     sharedMediaUrl,
     sharedMediaType,
     localUserId,
+    createVote,
+    vote,
+    activeVote,
+    currentVotes,
+    hostId,
   } = useWebRTC(id as string);
 
   const localAudioRef = useRef<HTMLAudioElement>(null);
@@ -28,6 +33,7 @@ export default function RoomPage() {
   >({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [copied, setCopied] = useState(false);
+  const [hasVoted, setHasVoted] = useState(false);
 
   useEffect(() => {
     if (localAudioRef.current && stream) {
@@ -40,13 +46,16 @@ export default function RoomPage() {
       if (!remoteAudioRefs.current[id]) {
         remoteAudioRefs.current[id] = React.createRef<HTMLAudioElement>();
       }
-
       const ref = remoteAudioRefs.current[id];
       if (ref.current) {
         ref.current.srcObject = stream;
       }
     });
   }, [remoteStreams]);
+
+  useEffect(() => {
+    if (!activeVote) setHasVoted(false);
+  }, [activeVote]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -56,7 +65,6 @@ export default function RoomPage() {
     reader.onloadend = () => {
       const result = reader.result as string;
       if (!result.startsWith("data:")) return;
-
       const ext = file.name.split(".").pop()?.toLowerCase();
       const mediaType = ext === "pdf" ? "pdf" : "image";
       sendSharedMedia(result, mediaType);
@@ -67,9 +75,7 @@ export default function RoomPage() {
 
   const handleClearMedia = () => {
     sendSharedMedia(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleLeaveRoom = () => {
@@ -77,14 +83,17 @@ export default function RoomPage() {
     router.push("/rooms");
   };
 
-  const triggerFileSelect = () => {
-    fileInputRef.current?.click();
-  };
+  const triggerFileSelect = () => fileInputRef.current?.click();
 
   const handleCopyRoomUrl = () => {
     navigator.clipboard.writeText(window.location.href);
     setCopied(true);
     setTimeout(() => setCopied(false), 3000);
+  };
+
+  const handleVote = (val: "yes" | "no") => {
+    vote(val);
+    setHasVoted(true);
   };
 
   return (
@@ -96,10 +105,9 @@ export default function RoomPage() {
         >
           {copied ? t("copied") : t("copy")}
         </button>
-
         <div className="flex-1 overflow-y-auto pr-1">
           <ul className="space-y-2 text-sm font-mono">
-            {participants.map((uid, index) => (
+            {participants.map((uid) => (
               <li
                 key={uid}
                 className={
@@ -107,8 +115,10 @@ export default function RoomPage() {
                 }
               >
                 {uid === localUserId
-                  ? `${t("you")} (${uid})`
-                  : index === 0
+                  ? uid === hostId
+                    ? `${t("you")} (${t("host")})`
+                    : `${t("you")} (${t("guest")})`
+                  : uid === hostId
                   ? `${t("host")} (${uid})`
                   : `${t("guest")} (${uid})`}
               </li>
@@ -166,8 +176,7 @@ export default function RoomPage() {
                     className="w-auto h-auto max-w-full max-h-96 object-contain"
                   />
                 )}
-
-                {localUserId === participants[0] && (
+                {localUserId === hostId && (
                   <button
                     onClick={handleClearMedia}
                     className="absolute top-2 right-2 bg-black bg-opacity-70 text-white px-3 py-1 rounded hover:bg-opacity-90"
@@ -175,7 +184,6 @@ export default function RoomPage() {
                     ✖ {t("close")}
                   </button>
                 )}
-
                 <a
                   href={sharedMediaUrl}
                   download={`shared-content.${
@@ -189,12 +197,53 @@ export default function RoomPage() {
             </div>
           )}
 
+          {/* Voting */}
+          <div className="mb-8 w-full max-w-md text-center">
+            <h2 className="text-xl font-semibold mb-2">🗳️ {t("vote.title")}</h2>
+            {!activeVote && localUserId === hostId && (
+              <button
+                onClick={() => createVote("yes-no")}
+                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+              >
+                {t("vote.start")}
+              </button>
+            )}
+            {activeVote && (
+              <div className="mt-4 space-y-4">
+                {!hasVoted && (
+                  <div className="flex justify-center gap-4">
+                    <button
+                      onClick={() => handleVote("yes")}
+                      className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                    >
+                      👍 {t("vote.yes")}
+                    </button>
+                    <button
+                      onClick={() => handleVote("no")}
+                      className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+                    >
+                      👎 {t("vote.no")}
+                    </button>
+                  </div>
+                )}
+                <div className="text-sm text-gray-300">
+                  ✅ {t("vote.yes")}:{" "}
+                  {
+                    Object.values(currentVotes).filter((v) => v === "yes")
+                      .length
+                  }{" "}
+                  | ❌ {t("vote.no")}:{" "}
+                  {Object.values(currentVotes).filter((v) => v === "no").length}
+                </div>
+              </div>
+            )}
+          </div>
+
           {remoteStreams.map((entry) => {
             if (!remoteAudioRefs.current[entry.id]) {
               remoteAudioRefs.current[entry.id] =
                 React.createRef<HTMLAudioElement>();
             }
-
             return (
               <audio
                 key={entry.id}

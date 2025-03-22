@@ -114,6 +114,12 @@
     "preview": "📎 Pregled deljenog sadržaja",
     "close": "Zatvori",
     "download": "Preuzmi",
-    "leave": "Napusti sobu"
+    "leave": "Napusti sobu",
+    "vote": {
+      "title": "Glasanje",
+      "start": "Započni glasanje",
+      "yes": "Da",
+      "no": "Ne"
+    }
   }
 }

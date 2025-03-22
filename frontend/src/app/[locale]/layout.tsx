@@ -54,7 +54,7 @@ export default async function LocaleLayout(props: {
             }}
           >
             <div
-              className="flex flex-col items-center w-full max-w-6xl mx-auto px-4 py-6"
+              className="flex flex-col items-center w-full mx-auto px-4 py-6"
               style={{
                 flex: 1,
                 display: "flex",
