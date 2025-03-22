@@ -27,16 +27,13 @@ export default function RoomPage() {
     hostId,
   } = useWebRTC(id as string);
 
-  const remoteAudioRefs = useRef<
-    Record<string, React.RefObject<HTMLAudioElement | null>>
-  >({});
+  const remoteAudioRefs = useRef<Record<string, HTMLAudioElement>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [copied, setCopied] = useState(false);
   const [hasVoted, setHasVoted] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [speakingUsers, setSpeakingUsers] = useState<Set<string>>(new Set());
 
-  // Audio analysis map
   const analyserRefs = useRef<Record<string, AnalyserNode>>({});
   const audioContextRef = useRef<AudioContext | null>(null);
 
@@ -50,12 +47,20 @@ export default function RoomPage() {
 
   useEffect(() => {
     remoteStreams.forEach(({ id, stream }) => {
-      if (!remoteAudioRefs.current[id]) {
-        remoteAudioRefs.current[id] = React.createRef<HTMLAudioElement>();
+      let audioEl = remoteAudioRefs.current[id];
+      if (!audioEl) {
+        audioEl = document.createElement("audio");
+        audioEl.autoplay = true;
+        audioEl.setAttribute("playsinline", "true");
+        audioEl.className = "hidden";
+        document.body.appendChild(audioEl);
+        remoteAudioRefs.current[id] = audioEl;
       }
-      const ref = remoteAudioRefs.current[id];
-      if (ref.current) {
-        ref.current.srcObject = stream;
+      if (stream && audioEl.srcObject !== stream) {
+        audioEl.srcObject = stream;
+        audioEl.onloadedmetadata = () => {
+          audioEl.play().catch(console.error);
+        };
         setupSpeakingDetection(id, stream);
       }
     });
@@ -85,7 +90,7 @@ export default function RoomPage() {
 
       setSpeakingUsers((prev) => {
         const updated = new Set(prev);
-        if (volume > 30) {
+        if (volume > 20) {
           updated.add(userId);
         } else {
           updated.delete(userId);
@@ -165,70 +170,84 @@ export default function RoomPage() {
         </button>
         <div className="flex-1 overflow-y-auto pr-1">
           <ul className="space-y-2 text-sm font-mono">
-            {localUserId &&
-              participants.map((uid) => (
-                <li
-                  key={uid}
-                  className={`flex items-center gap-2 ${
-                    uid === localUserId ? "text-green-400" : "text-white"
+            {participants.map((uid) => (
+              <li
+                key={uid}
+                className={`flex items-center gap-2 ${
+                  uid === localUserId ? "text-green-400" : "text-white"
+                }`}
+              >
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    speakingUsers.has(uid)
+                      ? "bg-green-500 animate-ping"
+                      : "bg-gray-600"
                   }`}
-                >
-                  <span
-                    className={`w-2 h-2 rounded-full ${
-                      speakingUsers.has(uid)
-                        ? "bg-green-500 animate-ping"
-                        : "bg-gray-600"
-                    }`}
-                  />
-                  {uid === localUserId
-                    ? uid === hostId
-                      ? `${t("you")} (${t("host")})`
-                      : `${t("you")} (${t("guest")})`
-                    : uid === hostId
-                    ? `${t("host")} (${uid})`
-                    : `${t("guest")} (${uid})`}
-                </li>
-              ))}
+                />
+                {uid === localUserId
+                  ? uid === hostId
+                    ? `${t("you")} (${t("host")})`
+                    : `${t("you")} (${t("guest")})`
+                  : uid === hostId
+                  ? `${t("host")} (${uid})`
+                  : `${t("guest")} (${uid})`}
+              </li>
+            ))}
           </ul>
         </div>
       </aside>
 
       <main className="flex-1 overflow-y-auto">
-        <div className="flex flex-col items-center justify-center min-h-full py-10 px-6">
-          <h1 className="text-2xl font-bold mb-6">
+        <div className="flex flex-col items-center justify-start min-h-full py-10 px-6 gap-6">
+          <h1 className="text-2xl font-bold">
             {t("room")} {id}
           </h1>
 
-          <div className="mb-6 text-center">
-            <h2 className="text-lg font-semibold">{t("mic")}</h2>
+          {/* Buttons Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 w-full max-w-3xl">
             <button
               onClick={toggleMute}
-              className="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700 mt-2"
+              className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded text-sm"
             >
               {isMuted ? `🔇 ${t("unmute")}` : `🎤 ${t("mute")}`}
             </button>
-          </div>
 
-          <div className="mb-6 text-center">
-            <h2 className="text-lg font-semibold mb-2">{t("share")}</h2>
             <button
               onClick={triggerFileSelect}
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
             >
               📁 {t("choose")}
             </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*,.pdf"
-              onChange={handleFileChange}
-              className="hidden"
-            />
+
+            <button
+              onClick={handleLeaveRoom}
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm"
+            >
+              {t("leave")}
+            </button>
+
+            {localUserId === hostId && !activeVote && (
+              <button
+                onClick={() => createVote("yes-no")}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm col-span-2 sm:col-span-1"
+              >
+                {t("vote.start")}
+              </button>
+            )}
           </div>
 
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,.pdf"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+
+          {/* Shared Media */}
           {sharedMediaUrl && sharedMediaType && (
-            <div className="mb-6 text-center relative">
-              <h2 className="text-lg font-semibold">{t("preview")}</h2>
+            <div className="relative mt-6 max-w-3xl w-full text-center">
+              <h2 className="text-lg font-semibold mb-2">{t("preview")}</h2>
               <div className="relative inline-block">
                 {sharedMediaType === "pdf" ? (
                   <iframe
@@ -268,69 +287,36 @@ export default function RoomPage() {
             </div>
           )}
 
-          <div className="mb-8 w-full max-w-md text-center">
-            <h2 className="text-xl font-semibold mb-2">🗳️ {t("vote.title")}</h2>
-            {localUserId && hostId && localUserId === hostId && !activeVote && (
-              <button
-                onClick={() => createVote("yes-no")}
-                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-              >
-                {t("vote.start")}
-              </button>
-            )}
-
-            {activeVote && (
-              <div className="mt-4 space-y-4">
-                {!hasVoted && (
-                  <div className="flex justify-center gap-4">
-                    <button
-                      onClick={() => handleVote("yes")}
-                      className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                    >
-                      👍 {t("vote.yes")}
-                    </button>
-                    <button
-                      onClick={() => handleVote("no")}
-                      className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
-                    >
-                      👎 {t("vote.no")}
-                    </button>
-                  </div>
-                )}
-                <div className="text-sm text-gray-300">
-                  ✅ {t("vote.yes")}:{" "}
-                  {
-                    Object.values(currentVotes).filter((v) => v === "yes")
-                      .length
-                  }{" "}
-                  | ❌ {t("vote.no")}:{" "}
-                  {Object.values(currentVotes).filter((v) => v === "no").length}
+          {/* Voting Section */}
+          {activeVote && (
+            <div className="w-full max-w-md text-center mt-8">
+              <h2 className="text-xl font-semibold mb-4">
+                🗳️ {t("vote.title")}
+              </h2>
+              {!hasVoted && (
+                <div className="flex justify-center gap-4 mb-4">
+                  <button
+                    onClick={() => handleVote("yes")}
+                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                  >
+                    👍 {t("vote.yes")}
+                  </button>
+                  <button
+                    onClick={() => handleVote("no")}
+                    className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+                  >
+                    👎 {t("vote.no")}
+                  </button>
                 </div>
+              )}
+              <div className="text-sm text-gray-300">
+                ✅ {t("vote.yes")}:{" "}
+                {Object.values(currentVotes).filter((v) => v === "yes").length}{" "}
+                | ❌ {t("vote.no")}:{" "}
+                {Object.values(currentVotes).filter((v) => v === "no").length}
               </div>
-            )}
-          </div>
-
-          {remoteStreams.map((entry) => {
-            if (!remoteAudioRefs.current[entry.id]) {
-              remoteAudioRefs.current[entry.id] =
-                React.createRef<HTMLAudioElement>();
-            }
-            return (
-              <audio
-                key={entry.id}
-                autoPlay
-                ref={remoteAudioRefs.current[entry.id]}
-                className="hidden"
-              />
-            );
-          })}
-
-          <button
-            onClick={handleLeaveRoom}
-            className="mt-10 bg-red-600 text-white px-6 py-2 w-48 rounded-md hover:bg-red-700"
-          >
-            {t("leave")}
-          </button>
+            </div>
+          )}
         </div>
       </main>
     </div>
