@@ -9,9 +9,9 @@ const SIGNALING_SERVER =
 type SharedMediaType = "image" | "pdf";
 
 type SignalMessage =
-  | { type: "join"; roomId: string }
   | { type: "init"; userId: string }
-  | { type: "participants"; users: string[] }
+  | { type: "join"; roomId: string }
+  | { type: "participants"; users: string[]; hostId: string }
   | { type: "user-joined"; userId: string }
   | { type: "offer"; userId: string; offer: RTCSessionDescriptionInit }
   | { type: "answer"; userId: string; answer: RTCSessionDescriptionInit }
@@ -27,7 +27,9 @@ type SignalMessage =
       type: "share-media";
       url: string;
       mediaType: SharedMediaType;
-    };
+    }
+  | { type: "create-vote"; question: string }
+  | { type: "vote"; userId: string; value: "yes" | "no" };
 
 type RemoteStreamEntry = {
   id: string;
@@ -36,16 +38,7 @@ type RemoteStreamEntry = {
 
 let wasInitialized = false;
 
-export function useWebRTC(roomId: string): {
-  stream: MediaStream | null;
-  remoteStreams: RemoteStreamEntry[];
-  leaveRoom: () => void;
-  participants: string[];
-  sendSharedMedia: (url: string | null, mediaType?: SharedMediaType) => void;
-  sharedMediaUrl: string | null;
-  sharedMediaType: SharedMediaType | null;
-  localUserId: string | null;
-} {
+export function useWebRTC(roomId: string) {
   const router = useRouter();
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [remoteStreams, setRemoteStreams] = useState<RemoteStreamEntry[]>([]);
@@ -54,6 +47,12 @@ export function useWebRTC(roomId: string): {
   const [sharedMediaType, setSharedMediaType] =
     useState<SharedMediaType | null>(null);
   const [localUserId, setLocalUserId] = useState<string | null>(null);
+  const [activeVote, setActiveVote] = useState<string | null>(null);
+  const [currentVotes, setCurrentVotes] = useState<
+    Record<string, "yes" | "no">
+  >({});
+  const [hostId, setHostId] = useState<string | null>(null);
+
   const socketRef = useRef<WebSocket | null>(null);
   const peersRef = useRef<{ [id: string]: RTCPeerConnection }>({});
   const userIdRef = useRef<string | null>(null);
@@ -62,20 +61,32 @@ export function useWebRTC(roomId: string): {
   const send = useCallback((msg: SignalMessage) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) {
       socketRef.current.send(JSON.stringify(msg));
-    } else {
-      console.warn("❌ WebSocket not open. Skipped:", msg);
     }
   }, []);
 
   const sendSharedMedia = useCallback(
     (url: string | null, mediaType: SharedMediaType = "image") => {
-      send({
-        type: "share-media",
-        url: url || "",
-        mediaType,
-      });
+      send({ type: "share-media", url: url || "", mediaType });
     },
     [send]
+  );
+
+  const createVote = useCallback(
+    (question: string) => {
+      if (localUserId === hostId) {
+        send({ type: "create-vote", question });
+      }
+    },
+    [send, localUserId, hostId]
+  );
+
+  const vote = useCallback(
+    (value: "yes" | "no") => {
+      if (localUserId && activeVote) {
+        send({ type: "vote", userId: localUserId, value });
+      }
+    },
+    [send, localUserId, activeVote]
   );
 
   const createPeer = useCallback(
@@ -121,8 +132,7 @@ export function useWebRTC(roomId: string): {
             if (peer.localDescription) {
               send({ type: "offer", userId, offer: peer.localDescription });
             }
-          })
-          .catch(console.error);
+          });
       }
 
       peersRef.current[userId] = peer;
@@ -142,6 +152,9 @@ export function useWebRTC(roomId: string): {
     setParticipants([]);
     setSharedMediaUrl(null);
     setSharedMediaType(null);
+    setActiveVote(null);
+    setCurrentVotes({});
+    setHostId(null);
 
     if (socketRef.current) {
       socketRef.current.close();
@@ -157,12 +170,7 @@ export function useWebRTC(roomId: string): {
 
   useEffect(() => {
     if (wasInitialized) return;
-
     wasInitialized = true;
-    isJoiningRef.current = false;
-    peersRef.current = {};
-    setRemoteStreams([]);
-    setParticipants([]);
 
     const connect = async () => {
       try {
@@ -171,11 +179,13 @@ export function useWebRTC(roomId: string): {
         });
         setStream(localStream);
 
+        const storedId = localStorage.getItem("clientId") || "";
+
         const socket = new WebSocket(SIGNALING_SERVER);
         socketRef.current = socket;
 
         socket.onopen = () => {
-          console.log("✅ Connected to signaling server");
+          socket.send(JSON.stringify({ type: "init", userId: storedId }));
         };
 
         socket.onmessage = async (event) => {
@@ -183,6 +193,7 @@ export function useWebRTC(roomId: string): {
 
           switch (message.type) {
             case "init":
+              localStorage.setItem("clientId", message.userId);
               userIdRef.current = message.userId;
               setLocalUserId(message.userId);
               isJoiningRef.current = true;
@@ -191,6 +202,7 @@ export function useWebRTC(roomId: string): {
 
             case "participants":
               setParticipants(message.users);
+              if ("hostId" in message) setHostId(message.hostId);
               break;
 
             case "user-joined":
@@ -202,6 +214,20 @@ export function useWebRTC(roomId: string): {
             case "shared-media":
               setSharedMediaUrl(message.url || null);
               setSharedMediaType(message.mediaType);
+              break;
+
+            case "create-vote":
+              setActiveVote(message.question);
+              setCurrentVotes({});
+              break;
+
+            case "vote":
+              if (message.userId && message.value) {
+                setCurrentVotes((prev) => ({
+                  ...prev,
+                  [message.userId]: message.value,
+                }));
+              }
               break;
 
             case "offer": {
@@ -241,14 +267,6 @@ export function useWebRTC(roomId: string): {
               break;
           }
         };
-
-        socket.onclose = () => {
-          socketRef.current = null;
-        };
-
-        socket.onerror = (e) => {
-          console.error("WebSocket error:", e);
-        };
       } catch (err) {
         console.error("❌ Failed to connect:", err);
       }
@@ -270,5 +288,10 @@ export function useWebRTC(roomId: string): {
     sharedMediaUrl,
     sharedMediaType,
     localUserId,
+    createVote,
+    vote,
+    activeVote,
+    currentVotes,
+    hostId,
   };
 }
