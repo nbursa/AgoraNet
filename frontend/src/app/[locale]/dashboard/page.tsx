@@ -6,8 +6,8 @@ export default function DashboardPage() {
   const t = useTranslations("dashboard");
 
   return (
-    <div className="flex-1 flex items-center justify-center w-full px-4 py-6 overflow-y-auto">
-      <div className="flex flex-col items-center justify-center w-full max-w-5xl text-center">
+    <div className="w-full min-h-full flex items-center justify-center px-4 py-6">
+      <div className="flex flex-col items-center w-full max-w-5xl text-center">
         <h1 className="text-3xl font-bold mb-4">📊 {t("title")}</h1>
 
         <p className="text-gray-400 mb-6">{t("description")}</p>

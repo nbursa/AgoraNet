@@ -17,11 +17,6 @@ export default function Header() {
     setLoggedIn(isAuthenticated());
   }, []);
 
-  // const switchLocale = (nextLocale: string) => {
-  //   const newPath = pathname.replace(`/${locale}`, `/${nextLocale}`);
-  //   router.push(newPath);
-  // };
-
   const switchLocale = (nextLocale: string) => {
     router.replace(pathname, { locale: nextLocale });
   };

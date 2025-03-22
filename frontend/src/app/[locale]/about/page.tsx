@@ -8,8 +8,8 @@ export default function AboutPage() {
   const locale = useLocale();
 
   return (
-    <div className="flex-1 flex items-center justify-center w-full px-4 py-6 overflow-y-auto">
-      <div className="flex flex-col items-center justify-center w-full max-w-3xl text-center">
+    <div className="w-full min-h-full flex items-center justify-center px-4 py-6">
+      <div className="max-w-3xl mx-auto flex flex-col items-center text-center">
         <h1 className="text-3xl font-bold">{t("title")}</h1>
         <p className="mt-4 text-gray-400">
           {t("description.part1")} <strong>{t("description.strong")}</strong>{" "}
