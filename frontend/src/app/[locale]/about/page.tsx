@@ -39,9 +39,9 @@ export default function AboutPage() {
           <p className="mt-2 text-gray-400">{t("getInvolved.text")}</p>
         </div>
 
-        <div className="mt-6">
+        <div className="mt-6 w-full">
           <Link href={`/${locale}`}>
-            <button className="bg-purple-600 text-white px-6 py-2 rounded-md hover:bg-purple-700">
+            <button className="w-full xs:w-auto bg-purple-600 text-white px-6 py-2 rounded-md hover:bg-purple-700">
               {t("backToHome")}
             </button>
           </Link>
