@@ -125,14 +125,16 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	for {
-		_, message, err := conn.ReadMessage()
+		_, rawMessage, err := conn.ReadMessage()
 		if err != nil {
 			log.Printf("📴 Read error from %s: %v", clientID, err)
 			break
 		}
 
+		log.Printf("📨 RAW MESSAGE from %s: %s", clientID, rawMessage)
+
 		var msg map[string]interface{}
-		if err := json.Unmarshal(message, &msg); err != nil {
+		if err := json.Unmarshal(rawMessage, &msg); err != nil {
 			log.Printf("⚠️ Invalid JSON from %s: %v", clientID, err)
 			continue
 		}
@@ -201,7 +203,12 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		roomLock.Unlock()
 
 		case "vote":
+			log.Printf("✅ VOTE PAYLOAD: %v", msg)
+
 			value, ok := msg["value"].(string)
+
+			log.Printf("📨 Full vote payload: %+v", msg)
+
 			if !ok {
 				log.Printf("⚠️ Invalid vote message from %s: missing value", clientID)
 				break
