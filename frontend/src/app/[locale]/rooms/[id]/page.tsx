@@ -54,6 +54,7 @@ export default function RoomPage() {
   const [hasVoted, setHasVoted] = useState(false);
   const [showLastVote, setShowLastVote] = useState(false);
   const [showVoteHistory, setShowVoteHistory] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const prevVoteRef = useRef<string | null>(null);
 
   const analyserRefs = useRef<Record<string, AnalyserNode>>({});
@@ -163,6 +164,8 @@ export default function RoomPage() {
     }
   }, [currentVotes, localUserId]);
 
+  const toggleMobileSidebar = () => setIsMobileSidebarOpen((prev) => !prev);
+
   const handleCreateVote = () => {
     if (!activeVote && voteQuestion.trim()) {
       createVote(voteQuestion.trim());
@@ -206,17 +209,40 @@ export default function RoomPage() {
     showLastVote && localUserId === hostId && lastVote !== undefined;
 
   return (
-    <div className="flex flex-row w-full h-full overflow-hidden">
-      <aside className="w-64 h-full bg-gray-900 text-white flex flex-col">
-        <div className="w-full p-4">
-          <button
-            onClick={handleCopyRoomUrl}
-            className="w-full flex-1 bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm"
-          >
-            {copied ? t("copied") : t("copy")}
-          </button>
+    <div className="flex flex-col sm:flex-row w-full h-full overflow-hidden">
+      {/* Sidebar */}
+      <aside
+        className={`bg-gray-900 text-white flex flex-col transition-all duration-300
+    sm:h-full sm:w-64 w-full
+    ${isMobileSidebarOpen ? "h-auto overflow-y-auto" : "h-auto"}`}
+      >
+        <div className="p-2 border-b border-gray-700 flex gap-2 flex-row sm:items-center sm:justify-start">
+          <div className="flex w-full sm:w-full gap-2">
+            <button
+              onClick={handleCopyRoomUrl}
+              className="w-1/2 flex-1 bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm sm:w-full"
+            >
+              {copied ? t("copied") : t("copy")}
+            </button>
+
+            <button
+              onClick={toggleMobileSidebar}
+              className="w-1/2 flex-1 sm:hidden bg-gray-800 hover:bg-gray-700 text-white px-3 py-2 rounded text-sm"
+            >
+              {isMobileSidebarOpen
+                ? t("hide-participants")
+                : t("show-participants")}
+            </button>
+          </div>
         </div>
-        <div className="flex-1 overflow-y-auto p-4">
+
+        <div
+          className={`overflow-y-auto px-4 transition-all duration-300 ${
+            isMobileSidebarOpen
+              ? "max-h-96 py-2"
+              : "max-h-0 sm:max-h-full sm:py-2"
+          }`}
+        >
           <ul className="space-y-2 text-sm font-mono">
             {participants.map((uid) => (
               <li
@@ -284,7 +310,7 @@ export default function RoomPage() {
                 leaveRoom();
                 window.location.href = "/rooms";
               }}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm col-span-2 sm:col-span-1"
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm"
             >
               {t("leave")}
             </button>

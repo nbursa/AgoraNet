@@ -134,6 +134,8 @@
     "mic-off": "Uključi mikrofon",
     "show-history": "Prikaži istoriju glasanja",
     "hide-history": "Sakrij istoriju glasanja",
+    "show-participants": "👥 Prikaži učesnike",
+    "hide-participants": "🙈 Sakrij učesnike",
     "vote": {
       "title": "Glasanje o temi",
       "start": "Kreiraj glasanje",

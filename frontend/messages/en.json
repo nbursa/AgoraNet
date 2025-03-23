@@ -134,6 +134,8 @@
     "mic-off": "Unmute microphone",
     "show-history": "Show Voting History",
     "hide-history": "Hide Voting History",
+    "show-participants": "👥 Show Participants",
+    "hide-participants": "🙈 Hide Participants",
     "vote": {
       "title": "Voting Session on Topic",
       "start": "Create Voting",
