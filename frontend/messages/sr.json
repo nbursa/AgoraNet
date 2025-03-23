@@ -1,7 +1,7 @@
 {
   "common": {
     "title": "Decentralizovani Plenum",
-    "rooms": "Sobe",
+    "rooms": "Plenumi",
     "dashboard": "Kontrolna tabla",
     "about": "O nama",
     "login": "Prijava",
@@ -9,7 +9,7 @@
   },
   "navigation": {
     "home": "Početna",
-    "rooms": "Sobe",
+    "rooms": "Plenumi",
     "dashboard": "Kontrolna tabla",
     "about": "O nama",
     "login": "Prijavi se",
@@ -46,7 +46,7 @@
     },
     "getInvolved": {
       "title": "Uključi se",
-      "text": "Ovaj projekat je otvorenog koda i svi su dobrodošli da doprinesu! Možete pogledati izvorni kod, prijaviti probleme i predložiti nove funkcije."
+      "text": "Ovaj projekat je društveno koristan i svi su dobrodošli da doprinesu! Možete pogledati izvorni kod, prijaviti probleme i predložiti nove funkcije."
     },
     "backToHome": "Nazad na početnu"
   },
@@ -79,9 +79,9 @@
   },
   "dashboard": {
     "title": "Kontrolna tabla",
-    "description": "Dobrodošli na vašu decentralizovanu kontrolnu tablu. Ovde možete pratiti sobe, glasanja, deljene fajlove i upravljati svojim prisustvom u plenumu.",
+    "description": "Dobrodošli na vašu decentralizovanu kontrolnu tablu. Ovde možete pratiti plenume, glasanja, deljene fajlove i upravljati svojim prisustvom u plenumu.",
     "rooms": {
-      "title": "Aktivne Sobe",
+      "title": "Aktivni Plenumi",
       "description": "Imate 3 tekuće diskusije."
     },
     "votes": {
@@ -94,27 +94,27 @@
     }
   },
   "rooms": {
-    "title": "Aktivne Sobe",
+    "title": "Aktivni Plenumi",
     "description": "Upravljajte vašim prostorima za diskusiju",
-    "create": "Kreiraj novu sobu",
-    "available": "Dostupne sobe",
+    "create": "Kreiraj novi plenum",
+    "available": "Dostupni plenumi",
     "delete": "Obriši",
     "noRooms": "Nema aktivnih soba"
   },
   "room": {
-    "copy": "📋 Kopiraj link sobe",
+    "copy": "📋 Kopiraj link plenuma",
     "copied": "✅ Kopirano!",
     "you": "🟢 Ti",
     "host": "👑 Domaćin",
     "guest": "🔉 Gost",
-    "room": "Soba",
+    "room": "Plenum",
     "mic": "🎙️ Vaš mikrofon",
     "share": "📤 Podeli dokument",
     "choose": "Prikaži fajl",
     "preview": "📎 Pregled deljenog sadržaja",
     "close": "Zatvori",
     "download": "Preuzmi",
-    "leave": "Napusti sobu",
+    "leave": "Napusti plenum",
     "mute": "Isključi zvuk",
     "unmute": "Uključi zvuk",
     "loading": "Učitavanje",

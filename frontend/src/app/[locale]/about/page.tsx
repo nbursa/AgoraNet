@@ -41,7 +41,7 @@ export default function AboutPage() {
 
         <div className="mt-6">
           <Link href={`/${locale}`}>
-            <button className="bg-purple-600 text-white px-6 py-2 rounded-md hover:bg-purple-700 hover:cursor-pointer">
+            <button className="bg-purple-600 text-white px-6 py-2 rounded-md hover:bg-purple-700">
               {t("backToHome")}
             </button>
           </Link>

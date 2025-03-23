@@ -61,10 +61,10 @@ export default function RoomsPage() {
         <h1 className="text-3xl font-bold">{t("title")}</h1>
         <p className="mt-2 text-gray-400">{t("description")}</p>
 
-        <div className="mt-6">
+        <div className="mt-6 w-full">
           <button
             onClick={createRoom}
-            className="bg-purple-600 text-white px-6 py-2 rounded-md hover:bg-purple-700 hover:cursor-pointer"
+            className="w-full xs:w-auto bg-purple-600 text-white px-6 py-2 rounded-md hover:bg-purple-700"
           >
             {t("create")}
           </button>
@@ -90,7 +90,7 @@ export default function RoomsPage() {
                     event.stopPropagation();
                     closeRoom(room);
                   }}
-                  className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 hover:cursor-pointer"
+                  className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600"
                 >
                   {t("delete")}
                 </button>
