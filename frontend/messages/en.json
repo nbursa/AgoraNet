@@ -120,6 +120,8 @@
     "loading": "Loading",
     "mic-on": "Mute microphone",
     "mic-off": "Unmute microphone",
+    "show-history": "Show Voting History",
+    "hide-history": "Hide Voting History",
     "vote": {
       "title": "Voting Session on Topic",
       "start": "Create Voting",
@@ -127,7 +129,11 @@
       "no": "No",
       "placeholder": "Type your question...",
       "end": "End Voting",
-      "results": "Voting Results"
+      "results": "Voting Results",
+      "history": "Vote History",
+      "total": "Total Voters",
+      "question": "Question",
+      "ended": "Voting session has ended."
     }
   }
 }

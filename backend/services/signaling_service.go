@@ -21,12 +21,20 @@ type Client struct {
 	RoomID string
 }
 
+type PastVote struct {
+	Question    string `json:"question"`
+	TotalVotes  int    `json:"totalVotes"`
+	YesCount    int    `json:"yesCount"`
+	NoCount     int    `json:"noCount"`
+}
+
 type Room struct {
 	Clients      map[string]*Client
 	HostID       string
 	ActiveVote   string
 	CurrentVotes map[string]string
 	LastMedia    map[string]interface{}
+	PastVotes    []PastVote
 }
 
 var (
@@ -182,6 +190,20 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		case "end-vote":
 			roomLock.Lock()
 			if room, exists := rooms[client.RoomID]; exists && room.HostID == client.ID {
+				if room.ActiveVote != "" {
+					vote := PastVote{
+						Question:   room.ActiveVote,
+						TotalVotes: len(room.CurrentVotes),
+					}
+					for _, v := range room.CurrentVotes {
+						if v == "yes" {
+							vote.YesCount++
+						} else if v == "no" {
+							vote.NoCount++
+						}
+					}
+					room.PastVotes = append(room.PastVotes, vote)
+				}
 				room.ActiveVote = ""
 				room.CurrentVotes = make(map[string]string)
 				broadcastRoomState(client.RoomID)
@@ -225,6 +247,7 @@ func registerClient(roomID string, client *Client) {
 			ActiveVote:   "",
 			CurrentVotes: make(map[string]string),
 			LastMedia:    nil,
+			PastVotes:    []PastVote{},
 		}
 		rooms[roomID] = room
 		log.Printf("👑 Created room %s (host: %s)", roomID, client.ID)
@@ -288,19 +311,23 @@ func broadcastRoomState(roomID string) {
 		users = append(users, id)
 	}
 
-	state := map[string]interface{}{
-		"type":          "room-state",
-		"users":         users,
-		"hostId":        room.HostID,
-		"activeVote":    room.ActiveVote,
-		"currentVotes":  room.CurrentVotes,
-	}
-
-	if room.LastMedia != nil {
-		state["sharedMedia"] = room.LastMedia
-	}
-
 	for _, client := range room.Clients {
+		state := map[string]interface{}{
+			"type":         "room-state",
+			"users":        users,
+			"hostId":       room.HostID,
+			"activeVote":   room.ActiveVote,
+			"currentVotes": room.CurrentVotes,
+		}
+
+		if room.LastMedia != nil {
+			state["sharedMedia"] = room.LastMedia
+		}
+
+		if client.ID == room.HostID {
+			state["voteHistory"] = room.PastVotes
+		}
+
 		client.Conn.WriteJSON(state)
 	}
 }

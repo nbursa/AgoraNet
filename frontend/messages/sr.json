@@ -120,6 +120,8 @@
     "loading": "Učitavanje",
     "mic-on": "Isključi mikrofon",
     "mic-off": "Uključi mikrofon",
+    "show-history": "Prikaži istoriju glasanja",
+    "hide-history": "Sakrij istoriju glasanja",
     "vote": {
       "title": "Glasanje o temi",
       "start": "Kreiraj glasanje",
@@ -127,7 +129,11 @@
       "no": "Ne",
       "placeholder": "Unesi temu za glasanje...",
       "end": "Završi glasanje",
-      "results": "Rezultati glasanja"
+      "results": "Rezultati glasanja",
+      "history": "Istorija Glasanja",
+      "total": "Ukupno Glasalo",
+      "question": "Pitanje",
+      "ended": "Glasanje je završeno"
     }
   }
 }

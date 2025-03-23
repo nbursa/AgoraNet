@@ -8,6 +8,13 @@ const SIGNALING_SERVER =
 
 type SharedMediaType = "image" | "pdf";
 
+type VoteResult = {
+  question: string;
+  yes: number;
+  no: number;
+  total: number;
+};
+
 type SignalMessage =
   | { type: "init"; userId: string }
   | { type: "join"; roomId: string }
@@ -23,8 +30,8 @@ type SignalMessage =
         url: string;
         mediaType: SharedMediaType;
       };
+      voteHistory?: VoteResult[];
     }
-  | { type: "user-joined"; userId: string }
   | { type: "offer"; userId: string; offer: RTCSessionDescriptionInit }
   | { type: "answer"; userId: string; answer: RTCSessionDescriptionInit }
   | { type: "ice-candidate"; userId: string; candidate: RTCIceCandidateInit }
@@ -59,12 +66,15 @@ export function useWebRTC(roomId: string) {
   >({});
   const [hostId, setHostId] = useState<string | null>(null);
   const [speakingUsers, setSpeakingUsers] = useState<Set<string>>(new Set());
+  const [voteHistory, setVoteHistory] = useState<VoteResult[]>([]);
 
   const socketRef = useRef<WebSocket | null>(null);
   const peersRef = useRef<{ [id: string]: RTCPeerConnection }>({});
   const userIdRef = useRef<string | null>(null);
   const isJoiningRef = useRef(false);
   const initializedRef = useRef(false);
+
+  const LOCAL_STORAGE_KEY = `voteHistory-${roomId}`;
 
   const send = useCallback((msg: SignalMessage) => {
     const json = JSON.stringify(msg);
@@ -185,6 +195,7 @@ export function useWebRTC(roomId: string) {
     setCurrentVotes({});
     setHostId(null);
     setSpeakingUsers(new Set());
+    setVoteHistory([]);
 
     if (socketRef.current) {
       socketRef.current.close();
@@ -237,6 +248,25 @@ export function useWebRTC(roomId: string) {
               if (message.sharedMedia) {
                 setSharedMediaUrl(message.sharedMedia.url);
                 setSharedMediaType(message.sharedMedia.mediaType);
+              }
+
+              if (message.voteHistory && userIdRef.current === message.hostId) {
+                const combined = [
+                  ...message.voteHistory,
+                  ...(JSON.parse(
+                    localStorage.getItem(LOCAL_STORAGE_KEY) || "[]"
+                  ) as VoteResult[]),
+                ];
+                const deduped = Array.from(
+                  new Map(combined.map((v) => [v.question, v])).values()
+                );
+                setVoteHistory(deduped);
+                localStorage.setItem(
+                  LOCAL_STORAGE_KEY,
+                  JSON.stringify(deduped)
+                );
+              } else {
+                setVoteHistory([]);
               }
               break;
 
@@ -306,7 +336,7 @@ export function useWebRTC(roomId: string) {
     return () => {
       leaveRoom();
     };
-  }, [roomId, createPeer, leaveRoom, send]);
+  }, [roomId, createPeer, leaveRoom, send, LOCAL_STORAGE_KEY]);
 
   return {
     stream,
@@ -326,5 +356,6 @@ export function useWebRTC(roomId: string) {
     speakingUsers,
     setSpeakingUsers,
     sendSpeakingStatus,
+    voteHistory,
   };
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Image from "next/image";
 import { useWebRTC } from "@/hooks/useWebRTC";
 import { useTranslations } from "next-intl";
@@ -9,7 +9,6 @@ import { useTranslations } from "next-intl";
 export default function RoomPage() {
   const t = useTranslations("room");
   const { id } = useParams();
-  const router = useRouter();
 
   const {
     stream,
@@ -29,6 +28,7 @@ export default function RoomPage() {
     speakingUsers,
     setSpeakingUsers,
     sendSpeakingStatus,
+    voteHistory,
   } = useWebRTC(id as string);
 
   const remoteAudioRefs = useRef<Record<string, HTMLAudioElement>>({});
@@ -37,31 +37,30 @@ export default function RoomPage() {
   const [isMicMuted, setIsMicMuted] = useState(true);
   const [voteQuestion, setVoteQuestion] = useState("");
   const [hasVoted, setHasVoted] = useState(false);
+  const [showLastVote, setShowLastVote] = useState(false);
+  const [showVoteHistory, setShowVoteHistory] = useState(false);
+  const prevVoteRef = useRef<string | null>(null);
+
   const analyserRefs = useRef<Record<string, AnalyserNode>>({});
   const audioContextRef = useRef<AudioContext | null>(null);
 
   const setupSpeakingDetection = useCallback(
     (userId: string, mediaStream: MediaStream, isLocal: boolean) => {
-      if (!audioContextRef.current) {
+      if (!audioContextRef.current)
         audioContextRef.current = new AudioContext();
-      }
-
       const audioContext = audioContextRef.current;
       const source = audioContext.createMediaStreamSource(mediaStream);
       const analyser = audioContext.createAnalyser();
       analyser.fftSize = 512;
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
-
       source.connect(analyser);
       analyserRefs.current[userId] = analyser;
 
       let prevSpeaking = false;
-
       const detect = () => {
         analyser.getByteFrequencyData(dataArray);
         const volume = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
         const isSpeaking = volume > 5;
-
         if (isLocal) {
           const audioTrack = mediaStream.getAudioTracks()[0];
           const isMicEnabled = audioTrack?.enabled;
@@ -80,10 +79,8 @@ export default function RoomPage() {
             prevSpeaking = false;
           }
         }
-
         requestAnimationFrame(detect);
       };
-
       detect();
     },
     [sendSpeakingStatus]
@@ -138,7 +135,11 @@ export default function RoomPage() {
   }, [setSpeakingUsers]);
 
   useEffect(() => {
-    if (!activeVote) setHasVoted(false);
+    if (prevVoteRef.current && !activeVote) {
+      setHasVoted(false);
+      setShowLastVote(true);
+    }
+    prevVoteRef.current = activeVote;
   }, [activeVote]);
 
   useEffect(() => {
@@ -152,21 +153,6 @@ export default function RoomPage() {
       createVote(voteQuestion.trim());
       setVoteQuestion("");
     }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      if (!result.startsWith("data:")) return;
-      const ext = file.name.split(".").pop()?.toLowerCase();
-      const mediaType = ext === "pdf" ? "pdf" : "image";
-      sendSharedMedia(result, mediaType);
-    };
-    reader.readAsDataURL(file);
   };
 
   const handleClearMedia = () => {
@@ -188,11 +174,6 @@ export default function RoomPage() {
     }
   };
 
-  const handleLeaveRoom = () => {
-    leaveRoom();
-    router.push("/rooms");
-  };
-
   const triggerFileSelect = () => fileInputRef.current?.click();
 
   const handleCopyRoomUrl = () => {
@@ -205,13 +186,9 @@ export default function RoomPage() {
     endVote();
   };
 
-  if (!localUserId) {
-    return (
-      <div className="flex items-center justify-center w-full h-full text-white bg-black">
-        <span className="animate-pulse text-lg">{t("loading")}...</span>
-      </div>
-    );
-  }
+  const lastVote = voteHistory[voteHistory.length - 1];
+  const showVoteSummary =
+    showLastVote && localUserId === hostId && lastVote !== undefined;
 
   return (
     <div className="flex flex-row w-full h-full overflow-hidden">
@@ -257,7 +234,11 @@ export default function RoomPage() {
             {t("room")} {id}
           </h1>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 w-full max-w-3xl">
+          <div
+            className={`grid grid-cols-2 gap-4 w-full max-w-3xl ${
+              localUserId === hostId ? "sm:grid-cols-4" : "sm:grid-cols-3"
+            }`}
+          >
             <button
               onClick={toggleMic}
               className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded text-sm"
@@ -272,9 +253,21 @@ export default function RoomPage() {
               📁 {t("choose")}
             </button>
 
+            {localUserId === hostId && voteHistory.length > 0 && (
+              <button
+                onClick={() => setShowVoteHistory((prev) => !prev)}
+                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm"
+              >
+                {showVoteHistory ? t("hide-history") : t("show-history")}
+              </button>
+            )}
+
             <button
-              onClick={handleLeaveRoom}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm"
+              onClick={() => {
+                leaveRoom();
+                window.location.href = "/rooms";
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm col-span-2 sm:col-span-1"
             >
               {t("leave")}
             </button>
@@ -302,7 +295,19 @@ export default function RoomPage() {
             ref={fileInputRef}
             type="file"
             accept="image/*,.pdf"
-            onChange={handleFileChange}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                const result = reader.result as string;
+                if (!result.startsWith("data:")) return;
+                const ext = file.name.split(".").pop()?.toLowerCase();
+                const mediaType = ext === "pdf" ? "pdf" : "image";
+                sendSharedMedia(result, mediaType);
+              };
+              reader.readAsDataURL(file);
+            }}
             className="hidden"
           />
 
@@ -351,14 +356,12 @@ export default function RoomPage() {
           {activeVote && (
             <div className="w-full max-w-md text-center mt-8">
               {!hasVoted && (
-                <div className="flex flex-col justify-center gap-4 w-full mb-8">
-                  <div className="text-lg">
-                    <span className="font-bold">🗳️ {t("vote.title")}:</span>{" "}
-                    <span className="underline underline-offset-4">
-                      {activeVote}
-                    </span>
+                <div className="flex flex-col gap-4 mb-6">
+                  <div className="text-lg font-semibold">
+                    🗳️ {t("vote.title")}:{" "}
+                    <span className="underline">{activeVote}</span>
                   </div>
-                  <div className="flex items-center justify-center gap-4">
+                  <div className="flex justify-center gap-4">
                     <button
                       onClick={() => handleVote("yes")}
                       className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
@@ -374,8 +377,8 @@ export default function RoomPage() {
                   </div>
                 </div>
               )}
-              <div className="text-sm text-gray-300 mb-8">
-                <h2 className="mb-2 font-bold text-xl">{t("vote.results")}</h2>
+              <div className="text-sm text-gray-300 mb-4">
+                <h2 className="font-bold text-xl mb-2">{t("vote.results")}</h2>
                 <div>
                   ✅ {t("vote.yes")}:{" "}
                   {
@@ -389,11 +392,46 @@ export default function RoomPage() {
               {localUserId === hostId && (
                 <button
                   onClick={handleEndVote}
-                  className="mt-2 bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded text-sm"
+                  className="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded text-sm"
                 >
-                  ✖️ {t("vote.end")}
+                  ✖ {t("vote.end")}
                 </button>
               )}
+            </div>
+          )}
+
+          {showVoteSummary && lastVote && (
+            <div className="w-full max-w-md text-center mt-4 text-white bg-gray-800 p-4 rounded shadow">
+              <div className="mb-2 text-lg font-bold">
+                ✅ {t("vote.ended")} – {lastVote.question}
+              </div>
+              <div>
+                ✅ {t("vote.yes")}: {lastVote.yes} | ❌ {lastVote.no} (
+                {t("vote.total")}: {lastVote.total})
+              </div>
+              <button
+                onClick={() => setShowLastVote(false)}
+                className="mt-4 bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 rounded text-sm"
+              >
+                ✖ {t("close")}
+              </button>
+            </div>
+          )}
+
+          {showVoteHistory && (
+            <div className="w-full max-w-md mt-6 text-white">
+              <h2 className="text-lg font-bold mb-2">{t("vote.history")}</h2>
+              <ul className="space-y-2 text-sm">
+                {voteHistory.map((v, idx) => (
+                  <li key={idx} className="bg-gray-700 p-3 rounded">
+                    <div className="font-semibold">{v.question}</div>
+                    <div>
+                      ✅ {t("vote.yes")}: {v.yes} | ❌ {v.no} ({t("vote.total")}
+                      : {v.total})
+                    </div>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
         </div>
