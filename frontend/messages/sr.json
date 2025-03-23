@@ -3,7 +3,7 @@
     "title": "Decentralizovani Plenum",
     "rooms": "Plenumi",
     "dashboard": "Panel",
-    "about": "O Plenumu",
+    "about": "Info",
     "login": "Prijava",
     "logout": "Odjava"
   },
@@ -11,7 +11,7 @@
     "home": "Početna",
     "rooms": "Plenumi",
     "dashboard": "Panel",
-    "about": "O plenumu",
+    "about": "Info",
     "login": "Prijavi se",
     "logout": "Odjavi se"
   },
@@ -24,29 +24,29 @@
     "loginBtn": "Prijava / Registracija"
   },
   "about": {
-    "title": "O Decentralizovanom Plenumu",
+    "title": "Šta je Decentralizovani Plenum?",
     "description": {
-      "part1": "Decentralizovani Plenum je bezbedna, na cenzuru otporna platforma za",
-      "strong": "glasovne diskusije i kolektivno donošenje odluka",
-      "part2": ". Omogućava zajednicama, aktivistima i pojedincima da učestvuju u slobodnim, anonimnim i demokratskim diskusijama."
+      "part1": "Decentralizovani Plenum je bezbedno online mesto za",
+      "strong": "otvorene diskusije, anonimno učešće i zajedničko donošenje odluka",
+      "part2": ". Možete da se pridružite glasovnim sobama(plenumima), slobodno govorite, delite dokumenta i glasate o važnim pitanjima — bez naloga i otkrivanja identiteta."
     },
     "features": {
-      "title": "Ključne funkcije",
+      "title": "Šta možete da radite",
       "items": [
-        "Diskusione sobe u realnom vremenu - korišćenjem P2P WebRTC tehnologije",
-        "Decentralizovano i otporno na cenzuru",
-        "Bez registracije - potpuna anonimnost",
-        "Ugrađen sistem glasanja - za odlučivanje",
-        "Mogućnost samostalnog hostovanja ili korišćenja javne instance"
+        "Odmah se priključite ili napravite glasovnu sobu(Plenum)",
+        "Govorte anonimno i bezbedno",
+        "Kreirajte i glasajte o vašim pitanjima (da/ne)",
+        "Delite i preuzmite podeljena dokumenta sa svim učesnicima",
+        "Vidite rezultate glasanja uživo ili ih sačuvajte anonimno"
       ]
     },
     "howItWorks": {
       "title": "Kako funkcioniše",
-      "text": "Korisnici mogu kreirati bezbedne glasovne diskusione sobe, pozvati učesnike i po potrebi sprovesti glasanja unutar platforme. Sistem je dizajniran da funkcioniše bez centralne vlasti, garantujući privatnost i slobodu govora."
+      "text": "Možete napraviti nalog koristeći samo anonimno korisničko ime i lokalno ga zaštititi lozinkom. Kada kreirate sobu, automatski postajete domaćin. Domaćin deli link sobe sa drugima, koji se mogu priključiti kao gosti bez registracije. Glas, audio i deljeni sadržaj prenose se direktno između učesnika — bez centralne kontrole, bez potrebe za prijavom za goste i bez praćenja. Sve — uključujući diskusije, glasanja i deljenje fajlova — ostaje na uređajima učesnika i nikada se ne čuva na spoljnim serverima."
     },
     "getInvolved": {
-      "title": "Uključi se",
-      "text": "Ovaj projekat je društveno koristan i svi su dobrodošli da doprinesu! Možete pogledati izvorni kod, prijaviti probleme i predložiti nove funkcije."
+      "title": "Zašto koristiti?",
+      "text": "Decentralizovani Plenum je napravljen da štiti slobodu govora i omogući zajednicama da se bezbedno organizuju. Radi bez centralne kontrole i vraća moć korisnicima."
     },
     "backToHome": "Nazad na početnu"
   },

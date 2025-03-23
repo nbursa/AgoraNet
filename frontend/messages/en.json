@@ -24,29 +24,29 @@
     "loginBtn": "Login / Register"
   },
   "about": {
-    "title": "About Decentralized Plenum",
+    "title": "What is Decentralized Plenum?",
     "description": {
-      "part1": "Decentralized Plenum is a secure, censorship-resistant platform for",
-      "strong": "voice-based discussions and collective decision-making",
-      "part2": ". It empowers communities, activists, and individuals to engage in free, anonymous, and democratic discussions."
+      "part1": "Decentralized Plenum is a secure online space for",
+      "strong": "open discussions, anonymous participation, and collective decision-making",
+      "part2": ". You can join voice-based rooms, speak freely, share documents, and vote on important topics — without needing an account or revealing your identity."
     },
     "features": {
-      "title": "Key Features",
+      "title": "What You Can Do",
       "items": [
-        "Real-time voice rooms - using P2P WebRTC technology",
-        "Decentralized & censorship-resistant",
-        "No registration required - ensuring full anonymity",
-        "Integrated voting system - for decision-making",
-        "Self-hosted or public instance support"
+        "Join or create voice rooms instantly",
+        "Speak anonymously and securely",
+        "Vote on questions with Yes/No polls",
+        "Share documents with all participants",
+        "See vote results live and stay in control"
       ]
     },
     "howItWorks": {
       "title": "How It Works",
-      "text": "Users can create secure voice discussion rooms, invite participants, and optionally conduct polls or votes within the platform. The system is designed to operate without a central authority, ensuring privacy and free speech."
+      "text": "You can create an account using only an anonymous username and secure it locally with a password. When you create a room, you automatically become the host. The host shares the room link with others, who can join as guests without registering, optionaly making username. Votes, audio, and shared content are transmitted directly between participants — with no central control, no login requirement for guests, and no tracking. Everything — including discussions, voting, and file sharing — stays on participant devices and is never stored on external servers."
     },
     "getInvolved": {
-      "title": "Get Involved",
-      "text": "This project is open-source, and contributions are welcome! You can check out the source code, report issues, and suggest features."
+      "title": "Why Use It?",
+      "text": "Decentralized Plenum is built to protect free speech and help communities organize safely. It works without central control and gives power back to the people using it."
     },
     "backToHome": "Back to Home"
   },
