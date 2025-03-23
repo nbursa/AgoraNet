@@ -11,7 +11,13 @@ type SharedMediaType = "image" | "pdf";
 type SignalMessage =
   | { type: "init"; userId: string }
   | { type: "join"; roomId: string }
-  | { type: "participants"; users: string[]; hostId: string }
+  | {
+      type: "participants";
+      users: string[];
+      hostId: string;
+      activeVote?: string;
+      currentVotes?: Record<string, "yes" | "no">;
+    }
   | { type: "user-joined"; userId: string }
   | { type: "offer"; userId: string; offer: RTCSessionDescriptionInit }
   | { type: "answer"; userId: string; answer: RTCSessionDescriptionInit }
@@ -225,9 +231,18 @@ export function useWebRTC(roomId: string) {
               send({ type: "join", roomId });
               break;
 
+            // case "participants":
+            //   setParticipants(message.users);
+            //   setHostId(message.hostId);
+            //   break;
+
             case "participants":
               setParticipants(message.users);
               setHostId(message.hostId);
+              if (message.activeVote) {
+                setActiveVote(message.activeVote);
+                setCurrentVotes(message.currentVotes || {});
+              }
               break;
 
             case "user-joined":

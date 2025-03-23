@@ -271,6 +271,8 @@ func registerClient(roomID string, client *Client) {
 				"type":   "participants",
 				"users":  userList,
 				"hostId": room.HostID,
+				"activeVote":   room.ActiveVote,
+				"currentVotes": room.CurrentVotes,
 			})
 
 			// Re-send shared media if any
