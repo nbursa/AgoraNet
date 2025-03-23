@@ -325,6 +325,21 @@ func removeClient(client *Client) {
 		if room, ok := rooms[client.RoomID]; ok {
 			delete(room.Clients, client.ID)
 
+			userList := []string{}
+			for _, c := range room.Clients {
+				userList = append(userList, c.ID)
+			}
+
+			// Broadcast updated participant list to everyone
+			for _, peer := range room.Clients {
+				_ = peer.Conn.WriteJSON(map[string]interface{}{
+					"type":   "participants",
+					"users":  userList,
+					"hostId": room.HostID,
+				})
+			}
+
+			// Notify others that the user left
 			for _, peer := range room.Clients {
 				_ = peer.Conn.WriteJSON(map[string]interface{}{
 					"type":   "leave",
