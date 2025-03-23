@@ -3,8 +3,14 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
-import { useWebRTC } from "@/hooks/useWebRTC";
+import { useWebRTC, VoteResult } from "@/hooks/useWebRTC";
 import { useTranslations } from "next-intl";
+
+type LegacyVoteResult = VoteResult & {
+  yesCount?: number;
+  noCount?: number;
+  totalVotes?: number;
+};
 
 export default function RoomPage() {
   const t = useTranslations("room");
@@ -30,6 +36,15 @@ export default function RoomPage() {
     sendSpeakingStatus,
     voteHistory,
   } = useWebRTC(id as string);
+
+  const normalizedVoteHistory = (voteHistory as LegacyVoteResult[]).map(
+    (v) => ({
+      question: v.question,
+      yes: v.yes ?? v.yesCount ?? 0,
+      no: v.no ?? v.noCount ?? 0,
+      total: v.total ?? v.totalVotes ?? 0,
+    })
+  );
 
   const remoteAudioRefs = useRef<Record<string, HTMLAudioElement>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -186,7 +201,7 @@ export default function RoomPage() {
     endVote();
   };
 
-  const lastVote = voteHistory[voteHistory.length - 1];
+  const lastVote = normalizedVoteHistory[normalizedVoteHistory.length - 1];
   const showVoteSummary =
     showLastVote && localUserId === hostId && lastVote !== undefined;
 
@@ -255,7 +270,7 @@ export default function RoomPage() {
               📁 {t("choose")}
             </button>
 
-            {localUserId === hostId && voteHistory.length > 0 && (
+            {localUserId === hostId && normalizedVoteHistory.length > 0 && (
               <button
                 onClick={() => setShowVoteHistory((prev) => !prev)}
                 className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm"
@@ -424,7 +439,7 @@ export default function RoomPage() {
             <div className="w-full max-w-md mt-6 text-white">
               <h2 className="text-lg font-bold mb-2">{t("vote.history")}</h2>
               <ul className="space-y-2 text-sm">
-                {voteHistory.map((v, idx) => (
+                {normalizedVoteHistory.map((v, idx) => (
                   <li key={idx} className="bg-gray-700 p-3 rounded">
                     <div className="font-semibold">{v.question}</div>
                     <div>

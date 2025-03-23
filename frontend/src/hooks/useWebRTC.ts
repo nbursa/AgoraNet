@@ -8,7 +8,7 @@ const SIGNALING_SERVER =
 
 type SharedMediaType = "image" | "pdf";
 
-type VoteResult = {
+export type VoteResult = {
   question: string;
   yes: number;
   no: number;
