@@ -192,13 +192,15 @@ export default function RoomPage() {
 
   return (
     <div className="flex flex-row w-full h-full overflow-hidden">
-      <aside className="w-64 h-full bg-gray-900 text-white p-4 border-r border-gray-700 flex flex-col">
-        <button
-          onClick={handleCopyRoomUrl}
-          className="mb-4 w-full bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm"
-        >
-          {copied ? t("copied") : t("copy")}
-        </button>
+      <aside className="w-64 h-full bg-gray-900 text-white border-r border-gray-700 flex flex-col">
+        <div className="w-full p-4">
+          <button
+            onClick={handleCopyRoomUrl}
+            className="w-full flex-1 bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm"
+          >
+            {copied ? t("copied") : t("copy")}
+          </button>
+        </div>
         <div className="flex-1 overflow-y-auto pr-1">
           <ul className="space-y-2 text-sm font-mono">
             {participants.map((uid) => (

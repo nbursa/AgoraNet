@@ -14,6 +14,10 @@
   }
 }
 
+@theme {
+  --breakpoint-xs: 370px;
+}
+
 html {
   box-sizing: border-box;
 }
@@ -47,10 +51,6 @@ body {
 *::before,
 *::after {
   box-sizing: inherit;
-}
-
-button {
-  width: auto;
 }
 
 button:hover {

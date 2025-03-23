@@ -1,6 +1,6 @@
 {
   "common": {
-    "title": "Decentralized Plenum",
+    "title": "Decentralized Meetings",
     "rooms": "Rooms",
     "dashboard": "Dashboard",
     "about": "About",
@@ -16,8 +16,8 @@
     "logout": "Logout"
   },
   "home": {
-    "title": "Decentralized Plenum",
-    "description": "Secure, decentralized meetings & discussions",
+    "title": "Decentralized Meeting",
+    "description": "Secure, decentralized meetings, discussions & voting",
     "viewRooms": "View Active Rooms",
     "createRoom": "Create New Room",
     "loginRequired": "You must be logged in to access rooms.",

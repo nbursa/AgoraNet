@@ -17,10 +17,10 @@
   },
   "home": {
     "title": "Decentralizovani Plenum",
-    "description": "Sigurni, decentralizovani sastanci i diskusije",
-    "viewRooms": "Pogledaj Aktivne Sobe",
-    "createRoom": "Kreiraj Novu Sobu",
-    "loginRequired": "Morate biti prijavljeni da biste pristupili sobama.",
+    "description": "Sigurni, decentralizovani sastanci, diskusije i glasanja",
+    "viewRooms": "Pogledaj Aktivne Plenume",
+    "createRoom": "Kreiraj Novi Plenum",
+    "loginRequired": "Morate biti prijavljeni da biste pristupili plenumima.",
     "loginBtn": "Prijava / Registracija"
   },
   "about": {

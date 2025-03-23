@@ -9,6 +9,9 @@ const config: Config = {
     "./src/lib/**/*.{ts,tsx}",
   ],
   theme: {
+    screens: {
+      xs: "375px",
+    },
     extend: {
       colors: {
         background: "var(--color-background)",

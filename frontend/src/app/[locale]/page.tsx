@@ -21,31 +21,31 @@ export default function HomePage() {
 
   return (
     <div className="flex-1 flex items-center justify-center w-full px-4 py-6">
-      <div className="flex flex-col items-center w-full max-w-3xl text-center">
+      <div className="flex flex-col items-center w-full max-w-2xl text-center">
         <h1 className="text-3xl font-bold">{t("title")}</h1>
-        <p className="mt-2 text-gray-600">{t("description")}</p>
+        <p className="mt-2 text-gray-400">{t("description")}</p>
 
         {isAuthenticated ? (
-          <div className="mt-6 space-x-4">
+          <div className="w-full mt-6 gap-4 flex flex-col xs:flex-row items-center justify-center">
             <button
               onClick={() => goTo("/rooms")}
-              className="bg-blue-600 text-white px-6 py-2 rounded-md"
+              className="w-full xs:w-auto bg-blue-600 text-white px-6 py-2 rounded-md"
             >
               {t("viewRooms")}
             </button>
             <button
               onClick={() => goTo("/rooms/new")}
-              className="bg-purple-600 text-white px-6 py-2 rounded-md"
+              className="w-full xs:w-auto bg-purple-600 text-white px-6 py-2 rounded-md"
             >
               {t("createRoom")}
             </button>
           </div>
         ) : (
-          <div className="mt-6 text-gray-600">
-            <p>🔒 {t("loginRequired")}</p>
+          <div className="mt-6">
+            <p className="text-gray-600 text-sm">🔒 {t("loginRequired")}</p>
             <button
               onClick={() => goTo("/login")}
-              className="mt-4 bg-green-600 text-white px-6 py-2 rounded-md"
+              className="w-full xs:w-auto mt-4 bg-green-600 text-white px-6 py-2 rounded-md"
             >
               {t("loginBtn")}
             </button>
