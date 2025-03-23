@@ -250,11 +250,14 @@ func registerClient(roomID string, client *Client) {
 			CurrentVotes: make(map[string]string),
 		}
 		rooms[roomID] = room
+		log.Printf("👑 Room %s created, host: %s", roomID, client.ID)
+	} else {
+		log.Printf("🔁 Rejoined room %s: %s", roomID, client.ID)
 	}
 
 	room.Clients[client.ID] = client
 
-	// REBUILD full user list and broadcast it to ALL clients
+	// Send updated participant list to all
 	userList := []string{}
 	for _, peer := range room.Clients {
 		userList = append(userList, peer.ID)
@@ -268,11 +271,12 @@ func registerClient(roomID string, client *Client) {
 		})
 	}
 
-	// Also re-send shared media and vote state to rejoining client
+	// Re-send shared media
 	if mediaMsg, ok := roomLastMedia[roomID]; ok {
 		client.Conn.WriteJSON(mediaMsg)
 	}
 
+	// Re-send active vote state to new client
 	if room.ActiveVote != "" {
 		client.Conn.WriteJSON(map[string]interface{}{
 			"type":     "create-vote",
@@ -322,34 +326,36 @@ func removeClient(client *Client) {
 	delete(clients, client.ID)
 
 	if client.RoomID != "" {
-		if room, ok := rooms[client.RoomID]; ok {
-			delete(room.Clients, client.ID)
+		room, ok := rooms[client.RoomID]
+		if !ok {
+			return
+		}
 
-			userList := []string{}
-			for _, c := range room.Clients {
-				userList = append(userList, c.ID)
-			}
+		delete(room.Clients, client.ID)
 
-			// Broadcast updated participant list to everyone
-			for _, peer := range room.Clients {
-				_ = peer.Conn.WriteJSON(map[string]interface{}{
-					"type":   "participants",
-					"users":  userList,
-					"hostId": room.HostID,
-				})
-			}
+		userList := []string{}
+		for _, c := range room.Clients {
+			userList = append(userList, c.ID)
+		}
 
-			// Notify others that the user left
-			for _, peer := range room.Clients {
-				_ = peer.Conn.WriteJSON(map[string]interface{}{
-					"type":   "leave",
-					"userId": client.ID,
-				})
-			}
+		for _, peer := range room.Clients {
+			peer.Conn.WriteJSON(map[string]interface{}{
+				"type":   "participants",
+				"users":  userList,
+				"hostId": room.HostID,
+			})
+		}
 
-			if len(room.Clients) == 0 {
-				delete(rooms, client.RoomID)
-			}
+		for _, peer := range room.Clients {
+			peer.Conn.WriteJSON(map[string]interface{}{
+				"type":   "leave",
+				"userId": client.ID,
+			})
+		}
+
+		// 👇 Do NOT delete the room anymore – preserve hostId across time
+		if len(room.Clients) == 0 {
+			log.Printf("🕒 Room %s now empty, preserving host: %s", client.RoomID, room.HostID)
 		}
 	}
 }
