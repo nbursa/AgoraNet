@@ -177,30 +177,30 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				"mediaType": mediaType,
 			})
 
-	case "create-vote":
-		question, ok := msg["question"].(string)
-		if !ok {
-			log.Printf("⚠️ Invalid create-vote message from %s", clientID)
-			break
-		}
-		roomLock.Lock()
-		room, exists := rooms[client.RoomID]
-		if exists {
-			if room.HostID == client.ID {
-				log.Printf("✅ Host %s creating vote in room %s: %s", clientID, client.RoomID, question)
-				room.ActiveVote = question
-				room.CurrentVotes = make(map[string]string)
-				broadcastMessage(client.RoomID, map[string]interface{}{
-					"type":     "create-vote",
-					"question": question,
-				})
-			} else {
-				log.Printf("⚠️ User %s is not host, cannot create vote", clientID)
+		case "create-vote":
+			question, ok := msg["question"].(string)
+			if !ok {
+				log.Printf("⚠️ Invalid create-vote message from %s", clientID)
+				break
 			}
-		} else {
-			log.Printf("⚠️ Room not found for create-vote: %s", client.RoomID)
-		}
-		roomLock.Unlock()
+			roomLock.Lock()
+			room, exists := rooms[client.RoomID]
+			if exists {
+				if room.HostID == client.ID {
+					log.Printf("✅ Host %s creating vote in room %s: %s", clientID, client.RoomID, question)
+					room.ActiveVote = question
+					room.CurrentVotes = make(map[string]string)
+					broadcastMessage(client.RoomID, map[string]interface{}{
+						"type":     "create-vote",
+						"question": question,
+					})
+				} else {
+					log.Printf("⚠️ User %s is not host, cannot create vote", clientID)
+				}
+			} else {
+				log.Printf("⚠️ Room not found for create-vote: %s", client.RoomID)
+			}
+			roomLock.Unlock()
 
 		case "vote":
 			log.Printf("✅ VOTE PAYLOAD: %v", msg)
