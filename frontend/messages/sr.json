@@ -110,7 +110,7 @@
     "room": "Soba",
     "mic": "🎙️ Vaš mikrofon",
     "share": "📤 Podeli dokument",
-    "choose": "Izaberi fajl",
+    "choose": "Prikaži fajl",
     "preview": "📎 Pregled deljenog sadržaja",
     "close": "Zatvori",
     "download": "Preuzmi",
@@ -121,10 +121,13 @@
     "mic-on": "Isključi mikrofon",
     "mic-off": "Uključi mikrofon",
     "vote": {
-      "title": "Glasanje",
-      "start": "Započni glasanje",
+      "title": "Glasanje o temi",
+      "start": "Kreiraj glasanje",
       "yes": "Da",
-      "no": "Ne"
+      "no": "Ne",
+      "placeholder": "Unesi temu za glasanje...",
+      "end": "Završi glasanje",
+      "results": "Rezultati glasanja"
     }
   }
 }

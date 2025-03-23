@@ -24,6 +24,7 @@ export default function RoomPage() {
     vote,
     activeVote,
     currentVotes,
+    endVote,
     hostId,
     speakingUsers,
     setSpeakingUsers,
@@ -33,19 +34,22 @@ export default function RoomPage() {
   const remoteAudioRefs = useRef<Record<string, HTMLAudioElement>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [copied, setCopied] = useState(false);
-  const [hasVoted, setHasVoted] = useState(false);
   const [isMicMuted, setIsMicMuted] = useState(true);
+  const [voteQuestion, setVoteQuestion] = useState("");
+  const [hasVoted, setHasVoted] = useState(false);
 
   const analyserRefs = useRef<Record<string, AnalyserNode>>({});
   const audioContextRef = useRef<AudioContext | null>(null);
 
-  const [voteCreated, setVoteCreated] = useState(false);
-
   const handleCreateVote = () => {
-    if (!voteCreated && !activeVote) {
-      createVote("yes-no");
-      setVoteCreated(true);
+    if (!activeVote && voteQuestion.trim() !== "") {
+      createVote(voteQuestion.trim());
+      setVoteQuestion("");
     }
+  };
+
+  const handleEndVote = () => {
+    endVote();
   };
 
   const setupSpeakingDetection = useCallback(
@@ -73,9 +77,7 @@ export default function RoomPage() {
         if (isLocal) {
           const audioTrack = mediaStream.getAudioTracks()[0];
           const isMicEnabled = audioTrack?.enabled;
-
           const finalSpeaking = isMicEnabled && isSpeaking;
-
           if (finalSpeaking !== prevSpeaking) {
             sendSpeakingStatus(finalSpeaking);
             prevSpeaking = finalSpeaking;
@@ -188,14 +190,6 @@ export default function RoomPage() {
   };
 
   const handleVote = (val: "yes" | "no") => {
-    console.log(
-      "📤 Sending vote from",
-      localUserId,
-      "value:",
-      val,
-      "activeVote:",
-      activeVote
-    );
     vote(val);
     setHasVoted(true);
   };
@@ -261,7 +255,7 @@ export default function RoomPage() {
             {t("room")} {id}
           </h1>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 w-full max-w-3xl">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 w-full max-w-3xl">
             <button
               onClick={toggleMic}
               className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded text-sm"
@@ -276,15 +270,6 @@ export default function RoomPage() {
               📁 {t("choose")}
             </button>
 
-            {localUserId === hostId && !activeVote && (
-              <button
-                onClick={handleCreateVote}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm col-span-2 sm:col-span-1"
-              >
-                {t("vote.start")}
-              </button>
-            )}
-
             <button
               onClick={handleLeaveRoom}
               className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm"
@@ -292,6 +277,24 @@ export default function RoomPage() {
               {t("leave")}
             </button>
           </div>
+
+          {localUserId === hostId && !activeVote && (
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2 w-full max-w-3xl">
+              <input
+                type="text"
+                placeholder={t("vote.placeholder")}
+                value={voteQuestion}
+                onChange={(e) => setVoteQuestion(e.target.value)}
+                className="flex-1 px-3 py-2 rounded bg-gray-800 text-white placeholder-gray-400 text-sm"
+              />
+              <button
+                onClick={handleCreateVote}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm whitespace-nowrap"
+              >
+                {t("vote.start")}
+              </button>
+            </div>
+          )}
 
           <input
             ref={fileInputRef}
@@ -345,30 +348,51 @@ export default function RoomPage() {
 
           {activeVote && (
             <div className="w-full max-w-md text-center mt-8">
-              <h2 className="text-xl font-semibold mb-4">
-                🗳️ {t("vote.title")}
-              </h2>
               {!hasVoted && (
-                <div className="flex justify-center gap-4 mb-4">
-                  <button
-                    onClick={() => handleVote("yes")}
-                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                  >
-                    👍 {t("vote.yes")}
-                  </button>
-                  <button
-                    onClick={() => handleVote("no")}
-                    className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
-                  >
-                    👎 {t("vote.no")}
-                  </button>
+                <div className="flex flex-col justify-center gap-4 w-full mb-8">
+                  <div className="text-lg">
+                    <span className="font-bold">🗳️ {t("vote.title")}:</span>{" "}
+                    <span className="underline underline-offset-4">
+                      {activeVote}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-center gap-4">
+                    <button
+                      onClick={() => handleVote("yes")}
+                      className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                    >
+                      👍 {t("vote.yes")}
+                    </button>
+                    <button
+                      onClick={() => handleVote("no")}
+                      className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+                    >
+                      👎 {t("vote.no")}
+                    </button>
+                  </div>
                 </div>
               )}
-              <div className="text-sm text-gray-300">
-                ✅ {t("vote.yes")}:{" "}
-                {Object.values(currentVotes).filter((v) => v === "yes").length}{" "}
-                | ❌ {t("vote.no")}:{" "}
-                {Object.values(currentVotes).filter((v) => v === "no").length}
+              <div className="text-sm text-gray-300 mb-8">
+                <h2 className="mb-2 font-bold text-xl">{t("vote.results")}</h2>
+                <div>
+                  ✅ {t("vote.yes")}:{" "}
+                  {
+                    Object.values(currentVotes).filter((v) => v === "yes")
+                      .length
+                  }{" "}
+                  | ❌ {t("vote.no")}:{" "}
+                  {Object.values(currentVotes).filter((v) => v === "no").length}
+                </div>
+              </div>
+              <div>
+                {localUserId === hostId && (
+                  <button
+                    onClick={handleEndVote}
+                    className="mt-2 bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded text-sm"
+                  >
+                    ✖️ {t("vote.end")}
+                  </button>
+                )}
               </div>
             </div>
           )}

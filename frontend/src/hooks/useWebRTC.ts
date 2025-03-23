@@ -28,9 +28,9 @@ type SignalMessage =
       url: string;
       mediaType: SharedMediaType;
     }
-  // | { type: "create-vote"; question: string }
   | { type: "create-vote"; question: string; userId?: string }
   | { type: "vote"; userId: string; value: "yes" | "no" }
+  | { type: "end-vote" }
   | { type: "speaking"; userId: string; isSpeaking: boolean };
 
 type RemoteStreamEntry = {
@@ -64,15 +64,9 @@ export function useWebRTC(roomId: string) {
     const json = JSON.stringify(msg);
     const ws = socketRef.current;
     if (ws?.readyState === WebSocket.OPEN) {
-      console.log("📡 Sending to server:", json);
       ws.send(json);
     } else {
-      console.warn(
-        "❌ WebSocket is not open. Cannot send:",
-        json,
-        "State:",
-        ws?.readyState
-      );
+      console.warn("❌ WebSocket is not open. Cannot send:", json);
     }
   }, []);
 
@@ -95,9 +89,7 @@ export function useWebRTC(roomId: string) {
   const createVote = useCallback(
     (question: string) => {
       if (localUserId === hostId && localUserId && !activeVote) {
-        console.log("🧠 Host creating vote:", question);
         send({ type: "create-vote", question, userId: localUserId });
-
         setActiveVote(question);
         setCurrentVotes({});
       }
@@ -105,13 +97,18 @@ export function useWebRTC(roomId: string) {
     [send, localUserId, hostId, activeVote]
   );
 
+  const endVote = useCallback(() => {
+    if (localUserId === hostId && activeVote) {
+      send({ type: "end-vote" });
+      setActiveVote(null);
+      setCurrentVotes({});
+    }
+  }, [send, localUserId, hostId, activeVote]);
+
   const vote = useCallback(
     (value: "yes" | "no") => {
       if (localUserId && activeVote) {
-        console.log("📡 vote(): sending to server", value);
         send({ type: "vote", userId: localUserId, value });
-      } else {
-        console.warn("❌ vote(): missing localUserId or activeVote");
       }
     },
     [send, localUserId, activeVote]
@@ -209,7 +206,6 @@ export function useWebRTC(roomId: string) {
         setStream(localStream);
 
         const storedId = localStorage.getItem("clientId") || "";
-
         const socket = new WebSocket(SIGNALING_SERVER);
         socketRef.current = socket;
 
@@ -248,25 +244,27 @@ export function useWebRTC(roomId: string) {
               break;
 
             case "create-vote":
-              if (
-                "question" in message &&
-                typeof message.question === "string"
-              ) {
-                console.log("🔥 Vote created:", message.question);
+              if (typeof message.question === "string") {
                 setActiveVote(message.question);
                 setCurrentVotes({});
-              } else {
-                console.warn("⚠️ Received create-vote without question");
               }
               break;
 
             case "vote":
-              if (message.userId && message.value) {
+              if (
+                typeof message.userId === "string" &&
+                (message.value === "yes" || message.value === "no")
+              ) {
                 setCurrentVotes((prev) => ({
                   ...prev,
                   [message.userId]: message.value,
                 }));
               }
+              break;
+
+            case "end-vote":
+              setActiveVote(null);
+              setCurrentVotes({});
               break;
 
             case "speaking":
@@ -277,7 +275,7 @@ export function useWebRTC(roomId: string) {
                 } else {
                   updated.delete(message.userId);
                 }
-                return new Set(updated);
+                return updated;
               });
               break;
 
@@ -318,26 +316,20 @@ export function useWebRTC(roomId: string) {
               setSpeakingUsers((prev) => {
                 const updated = new Set(prev);
                 updated.delete(message.userId);
-                return new Set(updated);
+                return updated;
               });
               break;
           }
         };
 
-        socket.onclose = (event) => {
-          console.warn("🛑 WebSocket closed:", event);
-        };
-
-        socket.onerror = (err) => {
-          console.error("🔥 WebSocket error:", err);
-        };
+        socket.onclose = () => console.warn("🛑 WebSocket closed.");
+        socket.onerror = (err) => console.error("🔥 WebSocket error:", err);
       } catch (err) {
         console.error("❌ Failed to connect:", err);
       }
     };
 
     connect();
-
     return () => {
       leaveRoom();
     };
@@ -353,6 +345,7 @@ export function useWebRTC(roomId: string) {
     sharedMediaType,
     localUserId,
     createVote,
+    endVote,
     vote,
     activeVote,
     currentVotes,

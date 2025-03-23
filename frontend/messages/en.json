@@ -110,7 +110,7 @@
     "room": "Room",
     "mic": "🎙️ Your Microphone",
     "share": "📤 Share Document",
-    "choose": "Choose File",
+    "choose": "Present File",
     "preview": "📎 Shared Preview",
     "close": "Close",
     "download": "Download",
@@ -121,10 +121,13 @@
     "mic-on": "Mute microphone",
     "mic-off": "Unmute microphone",
     "vote": {
-      "title": "Voting",
-      "start": "Start Voting",
+      "title": "Voting Session on Topic",
+      "start": "Create Voting",
       "yes": "Yes",
-      "no": "No"
+      "no": "No",
+      "placeholder": "Type your question...",
+      "end": "End Voting",
+      "results": "Voting Results"
     }
   }
 }
