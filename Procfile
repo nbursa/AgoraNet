@@ -1,1 +1,1 @@
-web: cd backend && go run cmd/main.go
+web: go run cmd/main.go
