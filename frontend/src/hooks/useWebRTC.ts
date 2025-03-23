@@ -12,23 +12,23 @@ type SignalMessage =
   | { type: "init"; userId: string }
   | { type: "join"; roomId: string }
   | {
-      type: "participants";
+      type: "room-state";
       users: string[];
       hostId: string;
       activeVote?: string | null;
       currentVotes?: Record<string, "yes" | "no">;
+      sharedMedia?: {
+        type: "shared-media";
+        userId: string;
+        url: string;
+        mediaType: SharedMediaType;
+      };
     }
   | { type: "user-joined"; userId: string }
   | { type: "offer"; userId: string; offer: RTCSessionDescriptionInit }
   | { type: "answer"; userId: string; answer: RTCSessionDescriptionInit }
   | { type: "ice-candidate"; userId: string; candidate: RTCIceCandidateInit }
   | { type: "leave"; userId: string }
-  | {
-      type: "shared-media";
-      userId: string;
-      url: string;
-      mediaType: SharedMediaType;
-    }
   | {
       type: "share-media";
       url: string;
@@ -71,8 +71,6 @@ export function useWebRTC(roomId: string) {
     const ws = socketRef.current;
     if (ws?.readyState === WebSocket.OPEN) {
       ws.send(json);
-    } else {
-      console.warn("❌ WebSocket is not open. Cannot send:", json);
     }
   }, []);
 
@@ -231,72 +229,15 @@ export function useWebRTC(roomId: string) {
               send({ type: "join", roomId });
               break;
 
-            // case "participants":
-            //   setParticipants(message.users);
-            //   setHostId(message.hostId);
-            //   break;
-
-            // case "participants":
-            //   setParticipants(message.users);
-            //   setHostId(message.hostId);
-            //   if (message.activeVote) {
-            //     setActiveVote(message.activeVote);
-            //     setCurrentVotes(message.currentVotes || {});
-            //   }
-            //   break;
-            case "participants": {
+            case "room-state":
               setParticipants(message.users);
               setHostId(message.hostId);
-              if ("activeVote" in message) {
-                setActiveVote(message.activeVote || null);
+              setActiveVote(message.activeVote || null);
+              setCurrentVotes(message.currentVotes || {});
+              if (message.sharedMedia) {
+                setSharedMediaUrl(message.sharedMedia.url);
+                setSharedMediaType(message.sharedMedia.mediaType);
               }
-              if (
-                "currentVotes" in message &&
-                typeof message.currentVotes === "object"
-              ) {
-                setCurrentVotes(message.currentVotes ?? {});
-              }
-              break;
-            }
-
-            case "user-joined":
-              if (message.userId !== userIdRef.current) {
-                createPeer(message.userId, true);
-              }
-              break;
-
-            case "shared-media":
-              setSharedMediaUrl(message.url || null);
-              setSharedMediaType(message.mediaType);
-              break;
-
-            case "create-vote":
-              setActiveVote(message.question);
-              setCurrentVotes({});
-              break;
-
-            case "vote":
-              setCurrentVotes((prev) => ({
-                ...prev,
-                [message.userId]: message.value,
-              }));
-              break;
-
-            case "end-vote":
-              setActiveVote(null);
-              setCurrentVotes({});
-              break;
-
-            case "speaking":
-              setSpeakingUsers((prev) => {
-                const updated = new Set(prev);
-                if (message.isSpeaking) {
-                  updated.add(message.userId);
-                } else {
-                  updated.delete(message.userId);
-                }
-                return updated;
-              });
               break;
 
             case "offer": {
@@ -336,6 +277,18 @@ export function useWebRTC(roomId: string) {
               setSpeakingUsers((prev) => {
                 const updated = new Set(prev);
                 updated.delete(message.userId);
+                return updated;
+              });
+              break;
+
+            case "speaking":
+              setSpeakingUsers((prev) => {
+                const updated = new Set(prev);
+                if (message.isSpeaking) {
+                  updated.add(message.userId);
+                } else {
+                  updated.delete(message.userId);
+                }
                 return updated;
               });
               break;

@@ -26,6 +26,7 @@ type Room struct {
 	HostID       string
 	ActiveVote   string
 	CurrentVotes map[string]string
+	LastMedia    map[string]interface{}
 }
 
 var (
@@ -34,10 +35,9 @@ var (
 			return true
 		},
 	}
-	clients       = make(map[string]*Client)
-	rooms         = make(map[string]*Room)
-	roomLastMedia = make(map[string]map[string]interface{})
-	roomLock      sync.Mutex
+	clients  = make(map[string]*Client)
+	rooms    = make(map[string]*Room)
+	roomLock sync.Mutex
 )
 
 func StartSignalingServer(port string) {
@@ -105,14 +105,12 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	clients[clientID] = client
 
 	log.Println("🔌 Connected:", clientID)
-	log.Println("✅ Initialized client ID:", clientID)
 
 	err = conn.WriteJSON(map[string]interface{}{
 		"type":   "init",
 		"userId": clientID,
 	})
 	if err != nil {
-		log.Printf("❌ Failed to send init to %s: %v", clientID, err)
 		conn.Close()
 		return
 	}
@@ -126,113 +124,91 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	for {
 		_, rawMessage, err := conn.ReadMessage()
 		if err != nil {
-			log.Printf("📴 Read error from %s: %v", clientID, err)
 			break
 		}
 
 		var msg map[string]interface{}
 		if err := json.Unmarshal(rawMessage, &msg); err != nil {
-			log.Printf("⚠️ Invalid JSON from %s: %v", clientID, err)
 			continue
 		}
 
 		switch msg["type"] {
 		case "join":
 			roomID, ok := msg["roomId"].(string)
-			if !ok || roomID == "" {
-				log.Printf("⚠️ Invalid join from %s: missing roomId", clientID)
-				break
+			if ok {
+				client.RoomID = roomID
+				registerClient(roomID, client)
 			}
-			client.RoomID = roomID
-			registerClient(roomID, client)
 
 		case "offer", "answer", "ice-candidate":
 			targetID, ok := msg["userId"].(string)
-			if !ok {
-				break
+			if ok {
+				msg["from"] = client.ID
+				forwardMessage(targetID, msg)
 			}
-			msg["from"] = client.ID
-			forwardMessage(targetID, msg)
 
 		case "leave":
 			removeClient(client)
 
 		case "share-media":
 			url, ok := msg["url"].(string)
-			mediaType, okType := msg["mediaType"].(string)
-			if !ok || !okType {
-				break
+			mediaType, ok2 := msg["mediaType"].(string)
+			if ok && ok2 {
+				roomLock.Lock()
+				if room, exists := rooms[client.RoomID]; exists {
+					room.LastMedia = map[string]interface{}{
+						"type":      "shared-media",
+						"userId":    client.ID,
+						"url":       url,
+						"mediaType": mediaType,
+					}
+					broadcastRoomState(client.RoomID)
+				}
+				roomLock.Unlock()
 			}
-			broadcastMessage(client.RoomID, map[string]interface{}{
-				"type":      "shared-media",
-				"userId":    client.ID,
-				"url":       url,
-				"mediaType": mediaType,
-			})
 
 		case "create-vote":
 			question, ok := msg["question"].(string)
-			if !ok {
-				break
+			if ok {
+				roomLock.Lock()
+				if room, exists := rooms[client.RoomID]; exists && room.HostID == client.ID {
+					room.ActiveVote = question
+					room.CurrentVotes = make(map[string]string)
+					broadcastRoomState(client.RoomID)
+				}
+				roomLock.Unlock()
 			}
-			roomLock.Lock()
-			room, exists := rooms[client.RoomID]
-			if exists && room.HostID == client.ID {
-				room.ActiveVote = question
-				room.CurrentVotes = make(map[string]string)
-				broadcastMessage(client.RoomID, map[string]interface{}{
-					"type":     "create-vote",
-					"question": question,
-				})
-			}
-			roomLock.Unlock()
 
 		case "end-vote":
 			roomLock.Lock()
-			room, ok := rooms[client.RoomID]
-			if ok && room.HostID == client.ID && room.ActiveVote != "" {
-				log.Printf("🛑 Ending vote in room %s by host %s", client.RoomID, client.ID)
+			if room, exists := rooms[client.RoomID]; exists && room.HostID == client.ID {
 				room.ActiveVote = ""
 				room.CurrentVotes = make(map[string]string)
-				broadcastMessage(client.RoomID, map[string]interface{}{
-					"type": "end-vote",
-				})
-			} else {
-				log.Printf("⚠️ Unauthorized or invalid end-vote from %s", client.ID)
+				broadcastRoomState(client.RoomID)
 			}
 			roomLock.Unlock()
 
 		case "vote":
-			value, ok := msg["value"].(string)
-			userID, okID := msg["userId"].(string)
-			if !ok || !okID {
-				break
+			userID, ok1 := msg["userId"].(string)
+			value, ok2 := msg["value"].(string)
+			if ok1 && ok2 {
+				roomLock.Lock()
+				if room, exists := rooms[client.RoomID]; exists && room.ActiveVote != "" {
+					room.CurrentVotes[userID] = value
+					broadcastRoomState(client.RoomID)
+				}
+				roomLock.Unlock()
 			}
-			roomLock.Lock()
-			room, ok := rooms[client.RoomID]
-			if ok && room.ActiveVote != "" {
-				room.CurrentVotes[userID] = value
-				broadcastMessage(client.RoomID, map[string]interface{}{
-					"type":   "vote",
-					"userId": userID,
-					"value":  value,
-				})
-			}
-			roomLock.Unlock()
 
 		case "speaking":
 			isSpeaking, ok := msg["isSpeaking"].(bool)
-			if !ok {
-				break
+			if ok {
+				broadcastMessage(client.RoomID, map[string]interface{}{
+					"type":       "speaking",
+					"userId":     client.ID,
+					"isSpeaking": isSpeaking,
+				})
 			}
-			broadcastMessage(client.RoomID, map[string]interface{}{
-				"type":       "speaking",
-				"userId":     client.ID,
-				"isSpeaking": isSpeaking,
-			})
-
-		default:
-			log.Printf("⚠️ Unknown message type from %s: %v", clientID, msg["type"])
 		}
 	}
 }
@@ -248,108 +224,16 @@ func registerClient(roomID string, client *Client) {
 			HostID:       client.ID,
 			ActiveVote:   "",
 			CurrentVotes: make(map[string]string),
+			LastMedia:    nil,
 		}
 		rooms[roomID] = room
-		log.Printf("👑 Room %s created, host: %s", roomID, client.ID)
+		log.Printf("👑 Created room %s (host: %s)", roomID, client.ID)
 	} else {
-		log.Printf("🔁 Rejoined room %s: %s", roomID, client.ID)
+		log.Printf("🔁 Joined room %s: %s", roomID, client.ID)
 	}
 
 	room.Clients[client.ID] = client
-
-	// Rebuild and send full participants list
-	userList := []string{}
-	for _, peer := range room.Clients {
-		userList = append(userList, peer.ID)
-	}
-
-	// Send participants list and hostId to all
-	for _, peer := range room.Clients {
-		if peer.ID == client.ID {
-			// Send full state to newly joined client first
-			peer.Conn.WriteJSON(map[string]interface{}{
-				"type":   "participants",
-				"users":  userList,
-				"hostId": room.HostID,
-				"activeVote":   room.ActiveVote,
-				"currentVotes": room.CurrentVotes,
-			})
-
-			// Re-send shared media if any
-			if mediaMsg, ok := roomLastMedia[roomID]; ok {
-				peer.Conn.WriteJSON(mediaMsg)
-			}
-
-			// Re-send vote state
-			if room.ActiveVote != "" {
-				peer.Conn.WriteJSON(map[string]interface{}{
-					"type":     "create-vote",
-					"question": room.ActiveVote,
-				})
-				for userId, value := range room.CurrentVotes {
-					peer.Conn.WriteJSON(map[string]interface{}{
-						"type":   "vote",
-						"userId": userId,
-						"value":  value,
-					})
-				}
-			}
-		} else {
-			// Send updated participants list to others
-			peer.Conn.WriteJSON(map[string]interface{}{
-				"type":   "participants",
-				"users":  userList,
-				"hostId": room.HostID,
-			})
-		}
-	}
-
-	// Resend shared media to rejoining client
-	if mediaMsg, ok := roomLastMedia[roomID]; ok {
-		client.Conn.WriteJSON(mediaMsg)
-	}
-
-	// Resend vote state (active question and votes so far)
-	if room.ActiveVote != "" {
-		client.Conn.WriteJSON(map[string]interface{}{
-			"type":     "create-vote",
-			"question": room.ActiveVote,
-		})
-		for userId, value := range room.CurrentVotes {
-			client.Conn.WriteJSON(map[string]interface{}{
-				"type":   "vote",
-				"userId": userId,
-				"value":  value,
-			})
-		}
-	}
-}
-
-func forwardMessage(targetID string, msg map[string]interface{}) {
-	roomLock.Lock()
-	defer roomLock.Unlock()
-
-	if target, ok := clients[targetID]; ok {
-		_ = target.Conn.WriteJSON(msg)
-	}
-}
-
-func broadcastMessage(roomID string, message map[string]interface{}) {
-	roomLock.Lock()
-	defer roomLock.Unlock()
-
-	if message["type"] == "shared-media" {
-		roomLastMedia[roomID] = message
-	}
-
-	room, exists := rooms[roomID]
-	if !exists {
-		return
-	}
-
-	for _, client := range room.Clients {
-		_ = client.Conn.WriteJSON(message)
-	}
+	broadcastRoomState(roomID)
 }
 
 func removeClient(client *Client) {
@@ -358,26 +242,8 @@ func removeClient(client *Client) {
 
 	delete(clients, client.ID)
 
-	if client.RoomID != "" {
-		room, ok := rooms[client.RoomID]
-		if !ok {
-			return
-		}
-
+	if room, exists := rooms[client.RoomID]; exists {
 		delete(room.Clients, client.ID)
-
-		userList := []string{}
-		for _, c := range room.Clients {
-			userList = append(userList, c.ID)
-		}
-
-		for _, peer := range room.Clients {
-			peer.Conn.WriteJSON(map[string]interface{}{
-				"type":   "participants",
-				"users":  userList,
-				"hostId": room.HostID,
-			})
-		}
 
 		for _, peer := range room.Clients {
 			peer.Conn.WriteJSON(map[string]interface{}{
@@ -386,9 +252,55 @@ func removeClient(client *Client) {
 			})
 		}
 
-		// 👇 Do NOT delete the room anymore – preserve hostId across time
 		if len(room.Clients) == 0 {
-			log.Printf("🕒 Room %s now empty, preserving host: %s", client.RoomID, room.HostID)
+			log.Printf("🕒 Room %s is now empty (host %s preserved)", client.RoomID, room.HostID)
+		} else {
+			broadcastRoomState(client.RoomID)
 		}
+	}
+}
+
+func forwardMessage(targetID string, msg map[string]interface{}) {
+	roomLock.Lock()
+	defer roomLock.Unlock()
+
+	if client, ok := clients[targetID]; ok {
+		client.Conn.WriteJSON(msg)
+	}
+}
+
+func broadcastMessage(roomID string, msg map[string]interface{}) {
+	if room, ok := rooms[roomID]; ok {
+		for _, client := range room.Clients {
+			client.Conn.WriteJSON(msg)
+		}
+	}
+}
+
+func broadcastRoomState(roomID string) {
+	room, ok := rooms[roomID]
+	if !ok {
+		return
+	}
+
+	users := []string{}
+	for id := range room.Clients {
+		users = append(users, id)
+	}
+
+	state := map[string]interface{}{
+		"type":          "room-state",
+		"users":         users,
+		"hostId":        room.HostID,
+		"activeVote":    room.ActiveVote,
+		"currentVotes":  room.CurrentVotes,
+	}
+
+	if room.LastMedia != nil {
+		state["sharedMedia"] = room.LastMedia
+	}
+
+	for _, client := range room.Clients {
+		client.Conn.WriteJSON(state)
 	}
 }

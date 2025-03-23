@@ -37,20 +37,8 @@ export default function RoomPage() {
   const [isMicMuted, setIsMicMuted] = useState(true);
   const [voteQuestion, setVoteQuestion] = useState("");
   const [hasVoted, setHasVoted] = useState(false);
-
   const analyserRefs = useRef<Record<string, AnalyserNode>>({});
   const audioContextRef = useRef<AudioContext | null>(null);
-
-  const handleCreateVote = () => {
-    if (!activeVote && voteQuestion.trim() !== "") {
-      createVote(voteQuestion.trim());
-      setVoteQuestion("");
-    }
-  };
-
-  const handleEndVote = () => {
-    endVote();
-  };
 
   const setupSpeakingDetection = useCallback(
     (userId: string, mediaStream: MediaStream, isLocal: boolean) => {
@@ -150,9 +138,7 @@ export default function RoomPage() {
   }, [setSpeakingUsers]);
 
   useEffect(() => {
-    if (!activeVote) {
-      setHasVoted(false);
-    }
+    if (!activeVote) setHasVoted(false);
   }, [activeVote]);
 
   useEffect(() => {
@@ -160,6 +146,13 @@ export default function RoomPage() {
       setHasVoted(true);
     }
   }, [currentVotes, localUserId]);
+
+  const handleCreateVote = () => {
+    if (!activeVote && voteQuestion.trim()) {
+      createVote(voteQuestion.trim());
+      setVoteQuestion("");
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -173,13 +166,26 @@ export default function RoomPage() {
       const mediaType = ext === "pdf" ? "pdf" : "image";
       sendSharedMedia(result, mediaType);
     };
-
     reader.readAsDataURL(file);
   };
 
   const handleClearMedia = () => {
     sendSharedMedia(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleVote = (val: "yes" | "no") => {
+    vote(val);
+    setHasVoted(true);
+  };
+
+  const toggleMic = () => {
+    const audioTrack = stream?.getAudioTracks()[0];
+    if (audioTrack) {
+      const enabled = !audioTrack.enabled;
+      audioTrack.enabled = enabled;
+      setIsMicMuted(!enabled);
+    }
   };
 
   const handleLeaveRoom = () => {
@@ -195,18 +201,8 @@ export default function RoomPage() {
     setTimeout(() => setCopied(false), 3000);
   };
 
-  const handleVote = (val: "yes" | "no") => {
-    vote(val);
-    setHasVoted(true);
-  };
-
-  const toggleMic = () => {
-    const audioTrack = stream?.getAudioTracks()[0];
-    if (audioTrack) {
-      const enabled = !audioTrack.enabled;
-      audioTrack.enabled = enabled;
-      setIsMicMuted(!enabled);
-    }
+  const handleEndVote = () => {
+    endVote();
   };
 
   if (!localUserId) {
@@ -390,16 +386,14 @@ export default function RoomPage() {
                   {Object.values(currentVotes).filter((v) => v === "no").length}
                 </div>
               </div>
-              <div>
-                {localUserId === hostId && (
-                  <button
-                    onClick={handleEndVote}
-                    className="mt-2 bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded text-sm"
-                  >
-                    ✖️ {t("vote.end")}
-                  </button>
-                )}
-              </div>
+              {localUserId === hostId && (
+                <button
+                  onClick={handleEndVote}
+                  className="mt-2 bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded text-sm"
+                >
+                  ✖️ {t("vote.end")}
+                </button>
+              )}
             </div>
           )}
         </div>
