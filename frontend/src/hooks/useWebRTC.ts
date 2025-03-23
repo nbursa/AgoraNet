@@ -15,7 +15,7 @@ type SignalMessage =
       type: "participants";
       users: string[];
       hostId: string;
-      activeVote?: string;
+      activeVote?: string | null;
       currentVotes?: Record<string, "yes" | "no">;
     }
   | { type: "user-joined"; userId: string }
@@ -236,14 +236,28 @@ export function useWebRTC(roomId: string) {
             //   setHostId(message.hostId);
             //   break;
 
-            case "participants":
+            // case "participants":
+            //   setParticipants(message.users);
+            //   setHostId(message.hostId);
+            //   if (message.activeVote) {
+            //     setActiveVote(message.activeVote);
+            //     setCurrentVotes(message.currentVotes || {});
+            //   }
+            //   break;
+            case "participants": {
               setParticipants(message.users);
               setHostId(message.hostId);
-              if (message.activeVote) {
-                setActiveVote(message.activeVote);
-                setCurrentVotes(message.currentVotes || {});
+              if ("activeVote" in message) {
+                setActiveVote(message.activeVote || null);
+              }
+              if (
+                "currentVotes" in message &&
+                typeof message.currentVotes === "object"
+              ) {
+                setCurrentVotes(message.currentVotes ?? {});
               }
               break;
+            }
 
             case "user-joined":
               if (message.userId !== userIdRef.current) {

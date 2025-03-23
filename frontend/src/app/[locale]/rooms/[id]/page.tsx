@@ -155,6 +155,12 @@ export default function RoomPage() {
     }
   }, [activeVote]);
 
+  useEffect(() => {
+    if (localUserId && currentVotes[localUserId]) {
+      setHasVoted(true);
+    }
+  }, [currentVotes, localUserId]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
