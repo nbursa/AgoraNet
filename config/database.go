@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/nbursa/decentralized-plenum/backend/models"
+	"github.com/nbursa/decentralized-plenum/models"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"

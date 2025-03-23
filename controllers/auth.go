@@ -1,9 +1,9 @@
 package controllers
 
 import (
-	"github.com/nbursa/decentralized-plenum/backend/config"
-	"github.com/nbursa/decentralized-plenum/backend/models"
-	"github.com/nbursa/decentralized-plenum/backend/services"
+	"github.com/nbursa/decentralized-plenum/config"
+	"github.com/nbursa/decentralized-plenum/models"
+	"github.com/nbursa/decentralized-plenum/services"
 
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"

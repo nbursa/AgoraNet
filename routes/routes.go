@@ -5,8 +5,8 @@ import (
 	"os"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/nbursa/decentralized-plenum/backend/controllers"
-	"github.com/nbursa/decentralized-plenum/backend/middleware"
+	"github.com/nbursa/decentralized-plenum/controllers"
+	"github.com/nbursa/decentralized-plenum/middleware"
 )
 
 func SetupRoutes(app *fiber.App) {
