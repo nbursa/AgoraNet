@@ -28,7 +28,7 @@ type SignalMessage =
       url: string;
       mediaType: SharedMediaType;
     }
-  | { type: "create-vote"; question: string; userId?: string }
+  | { type: "create-vote"; question: string }
   | { type: "vote"; userId: string; value: "yes" | "no" }
   | { type: "end-vote" }
   | { type: "speaking"; userId: string; isSpeaking: boolean };
@@ -88,8 +88,8 @@ export function useWebRTC(roomId: string) {
 
   const createVote = useCallback(
     (question: string) => {
-      if (localUserId === hostId && localUserId && !activeVote) {
-        send({ type: "create-vote", question, userId: localUserId });
+      if (localUserId === hostId && !activeVote) {
+        send({ type: "create-vote", question });
         setActiveVote(question);
         setCurrentVotes({});
       }
@@ -227,9 +227,7 @@ export function useWebRTC(roomId: string) {
 
             case "participants":
               setParticipants(message.users);
-              if (typeof message.hostId === "string") {
-                setHostId(message.hostId);
-              }
+              setHostId(message.hostId);
               break;
 
             case "user-joined":
@@ -244,22 +242,15 @@ export function useWebRTC(roomId: string) {
               break;
 
             case "create-vote":
-              if (typeof message.question === "string") {
-                setActiveVote(message.question);
-                setCurrentVotes({});
-              }
+              setActiveVote(message.question);
+              setCurrentVotes({});
               break;
 
             case "vote":
-              if (
-                typeof message.userId === "string" &&
-                (message.value === "yes" || message.value === "no")
-              ) {
-                setCurrentVotes((prev) => ({
-                  ...prev,
-                  [message.userId]: message.value,
-                }));
-              }
+              setCurrentVotes((prev) => ({
+                ...prev,
+                [message.userId]: message.value,
+              }));
               break;
 
             case "end-vote":

@@ -257,26 +257,57 @@ func registerClient(roomID string, client *Client) {
 
 	room.Clients[client.ID] = client
 
-	// Send updated participant list to all
+	// Rebuild and send full participants list
 	userList := []string{}
 	for _, peer := range room.Clients {
 		userList = append(userList, peer.ID)
 	}
 
+	// Send participants list and hostId to all
 	for _, peer := range room.Clients {
-		peer.Conn.WriteJSON(map[string]interface{}{
-			"type":   "participants",
-			"users":  userList,
-			"hostId": room.HostID,
-		})
+		if peer.ID == client.ID {
+			// Send full state to newly joined client first
+			peer.Conn.WriteJSON(map[string]interface{}{
+				"type":   "participants",
+				"users":  userList,
+				"hostId": room.HostID,
+			})
+
+			// Re-send shared media if any
+			if mediaMsg, ok := roomLastMedia[roomID]; ok {
+				peer.Conn.WriteJSON(mediaMsg)
+			}
+
+			// Re-send vote state
+			if room.ActiveVote != "" {
+				peer.Conn.WriteJSON(map[string]interface{}{
+					"type":     "create-vote",
+					"question": room.ActiveVote,
+				})
+				for userId, value := range room.CurrentVotes {
+					peer.Conn.WriteJSON(map[string]interface{}{
+						"type":   "vote",
+						"userId": userId,
+						"value":  value,
+					})
+				}
+			}
+		} else {
+			// Send updated participants list to others
+			peer.Conn.WriteJSON(map[string]interface{}{
+				"type":   "participants",
+				"users":  userList,
+				"hostId": room.HostID,
+			})
+		}
 	}
 
-	// Re-send shared media
+	// Resend shared media to rejoining client
 	if mediaMsg, ok := roomLastMedia[roomID]; ok {
 		client.Conn.WriteJSON(mediaMsg)
 	}
 
-	// Re-send active vote state to new client
+	// Resend vote state (active question and votes so far)
 	if room.ActiveVote != "" {
 		client.Conn.WriteJSON(map[string]interface{}{
 			"type":     "create-vote",
