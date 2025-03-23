@@ -2,16 +2,16 @@
   "common": {
     "title": "Decentralizovani Plenum",
     "rooms": "Plenumi",
-    "dashboard": "Kontrolna tabla",
-    "about": "O nama",
+    "dashboard": "Panel",
+    "about": "O Plenumu",
     "login": "Prijava",
     "logout": "Odjava"
   },
   "navigation": {
     "home": "Početna",
     "rooms": "Plenumi",
-    "dashboard": "Kontrolna tabla",
-    "about": "O nama",
+    "dashboard": "Panel",
+    "about": "O plenumu",
     "login": "Prijavi se",
     "logout": "Odjavi se"
   },
@@ -80,19 +80,29 @@
   "dashboard": {
     "title": "Kontrolna tabla",
     "description": "Dobrodošli na vašu decentralizovanu kontrolnu tablu. Ovde možete pratiti plenume, glasanja, deljene fajlove i upravljati svojim prisustvom u plenumu.",
+    "room": "Plenum",
     "rooms": {
       "title": "Aktivni Plenumi",
       "noRooms": "Nema aktivnih soba",
-      "description": "Imate 3 tekuće diskusije."
+      "description": "Imate 3 tekuće diskusije.",
+      "viewDetails": "Pogledaj detalje"
     },
     "votes": {
       "title": "Nedavna Glasanja",
       "none": "Nema novih rezultata.",
-      "description": "Dostupna su 2 nova rezultata."
+      "description": "Dostupna su 2 nova rezultata.",
+      "recorded": "glasanja zabeleženo"
     },
     "files": {
       "title": "Deljeni Fajlovi",
       "description": "5 novih dokumenata je podeljeno ove nedelje."
+    },
+    "user": {
+      "sync": "🧠 Sačuvaj rezultate glasanja u bazi",
+      "syncing": "🔄 Sačuvanje u toku..."
+    },
+    "guest": {
+      "label": "Anonimni korisnik"
     }
   },
   "rooms": {
@@ -136,6 +146,17 @@
       "total": "Ukupno Glasalo",
       "question": "Pitanje",
       "ended": "Glasanje je završeno"
+    }
+  },
+  "modal": {
+    "title": "Rezultati glasanja za sobu:",
+    "close": "Zatvori",
+    "empty": "🕳️ Nema zabeleženih glasova u ovoj sobi.",
+    "labels": {
+      "yes": "Da",
+      "no": "Ne",
+      "notVoted": "Nije glasao",
+      "total": "Ukupno"
     }
   }
 }

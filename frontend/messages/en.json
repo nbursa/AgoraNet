@@ -80,19 +80,29 @@
   "dashboard": {
     "title": "Dashboard",
     "description": "Welcome to your decentralized dashboard. Here you can monitor your rooms, votes, shared files, and manage your presence in the plenum.",
+    "room": "Room",
     "rooms": {
       "title": "Active Rooms",
       "noRooms": "No active rooms available.",
-      "description": "You have 3 ongoing discussions."
+      "description": "You have 3 ongoing discussions.",
+      "viewDetails": "View Details"
     },
     "votes": {
       "title": "Recent Votes",
       "none": "No new results.",
-      "description": "2 new results available."
+      "description": "2 new results available.",
+      "recorded": "votes recorded"
     },
     "files": {
       "title": "Shared Files",
       "description": "5 new documents shared this week."
+    },
+    "user": {
+      "sync": "🧠 Sync Vote Results to DB",
+      "syncing": "🔄 Syncing..."
+    },
+    "guest": {
+      "label": "Anonymous user"
     }
   },
   "rooms": {
@@ -136,6 +146,17 @@
       "total": "Total Voters",
       "question": "Question",
       "ended": "Voting session has ended."
+    }
+  },
+  "modal": {
+    "title": "📊 Vote Results for Room:",
+    "close": "Close",
+    "empty": "🕳️ No votes recorded in this room.",
+    "labels": {
+      "yes": "Yes",
+      "no": "No",
+      "notVoted": "Not Voted",
+      "total": "Total"
     }
   }
 }
