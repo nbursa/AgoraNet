@@ -1,9 +1,10 @@
 package config
 
 import (
-	"decentralized-plenum/models"
 	"fmt"
 	"os"
+
+	"github.com/nbursa/decentralized-plenum/backend/models"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"

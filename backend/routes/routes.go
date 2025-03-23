@@ -1,12 +1,12 @@
 package routes
 
 import (
-	"decentralized-plenum/controllers"
-	"decentralized-plenum/middleware"
 	"fmt"
 	"os"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/nbursa/decentralized-plenum/backend/controllers"
+	"github.com/nbursa/decentralized-plenum/backend/middleware"
 )
 
 func SetupRoutes(app *fiber.App) {

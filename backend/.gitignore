@@ -6,7 +6,6 @@ bin/
 *.o
 
 # Go modules
-go.sum
 go.work
 go.work.sum
 

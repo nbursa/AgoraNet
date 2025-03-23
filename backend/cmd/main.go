@@ -7,9 +7,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"decentralized-plenum/config"
-	"decentralized-plenum/routes"
-	"decentralized-plenum/services"
+	"github.com/nbursa/decentralized-plenum/backend/config"
+	"github.com/nbursa/decentralized-plenum/backend/routes"
+	"github.com/nbursa/decentralized-plenum/backend/services"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"

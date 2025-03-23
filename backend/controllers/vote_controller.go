@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	"decentralized-plenum/config"
-	"decentralized-plenum/models"
+	"github.com/nbursa/decentralized-plenum/backend/config"
+	"github.com/nbursa/decentralized-plenum/backend/models"
 
 	"github.com/gofiber/fiber/v2"
 )

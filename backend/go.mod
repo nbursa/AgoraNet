@@ -1,6 +1,5 @@
 // +heroku install ./cmd/...
-
-module decentralized-plenum
+module github.com/nbursa/decentralized-plenum/backend
 
 go 1.23.0
 
