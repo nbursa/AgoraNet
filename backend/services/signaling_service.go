@@ -51,6 +51,7 @@ var (
 func StartSignalingServer(port string) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ws", handleWebSocket)
+	mux.HandleFunc("/dashboard", handleDashboardSocket)
 
 	srv := &http.Server{
 		Addr:    ":" + port,
@@ -329,5 +330,50 @@ func broadcastRoomState(roomID string) {
 		}
 
 		client.Conn.WriteJSON(state)
+	}
+}
+
+func handleDashboardSocket(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println("❌ Dashboard upgrade error:", err)
+		return
+	}
+	defer conn.Close()
+
+	for {
+		time.Sleep(2 * time.Second)
+
+		roomLock.Lock()
+		var summaries []map[string]interface{}
+		for roomID, room := range rooms {
+			summary := map[string]interface{}{
+				"roomId":           roomID,
+				"hostId":           room.HostID,
+				"participantCount": len(room.Clients),
+			}
+			if room.ActiveVote != "" {
+				yes, no := 0, 0
+				for _, v := range room.CurrentVotes {
+					if v == "yes" {
+						yes++
+					} else if v == "no" {
+						no++
+					}
+				}
+				summary["activeVote"] = map[string]interface{}{
+					"question": room.ActiveVote,
+					"yes":      yes,
+					"no":       no,
+				}
+			}
+			summaries = append(summaries, summary)
+		}
+		roomLock.Unlock()
+
+		conn.WriteJSON(map[string]interface{}{
+			"type":  "dashboard-summary",
+			"rooms": summaries,
+		})
 	}
 }

@@ -92,11 +92,19 @@ func GetCurrentUser(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid token"})
 	}
 
+	// Try DB lookup for full profile (avatar)
 	var user models.User
-	if result := config.DB.Where("username = ?", token.Username).First(&user); result.Error != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
+	if result := config.DB.Where("username = ?", token.Username).First(&user); result.Error == nil {
+		return c.JSON(fiber.Map{
+			"username": user.Username,
+			"avatar":   user.Avatar,
+		})
 	}
 
-	return c.JSON(fiber.Map{"username": user.Username, "avatar": user.Avatar})
+	// Fallback for anonymous users (no avatar)
+	return c.JSON(fiber.Map{
+		"username": token.Username,
+	})
 }
+
 

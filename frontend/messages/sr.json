@@ -82,10 +82,12 @@
     "description": "Dobrodošli na vašu decentralizovanu kontrolnu tablu. Ovde možete pratiti plenume, glasanja, deljene fajlove i upravljati svojim prisustvom u plenumu.",
     "rooms": {
       "title": "Aktivni Plenumi",
+      "noRooms": "Nema aktivnih soba",
       "description": "Imate 3 tekuće diskusije."
     },
     "votes": {
       "title": "Nedavna Glasanja",
+      "none": "Nema novih rezultata.",
       "description": "Dostupna su 2 nova rezultata."
     },
     "files": {

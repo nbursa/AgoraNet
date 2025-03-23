@@ -82,10 +82,12 @@
     "description": "Welcome to your decentralized dashboard. Here you can monitor your rooms, votes, shared files, and manage your presence in the plenum.",
     "rooms": {
       "title": "Active Rooms",
+      "noRooms": "No active rooms available.",
       "description": "You have 3 ongoing discussions."
     },
     "votes": {
       "title": "Recent Votes",
+      "none": "No new results.",
       "description": "2 new results available."
     },
     "files": {
