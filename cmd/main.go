@@ -19,24 +19,31 @@ import (
 func main() {
 	fmt.Println("Starting Decentralized Plenum Backend...")
 
-	if os.Getenv("DYNO") == "" {
-        if err := godotenv.Load(); err != nil {
-            log.Fatal("Error loading .env file:", err)
-        }
-    }
+	// Load .env file only if not on Heroku
+	if os.Getenv("DYNO") == "" { // Check if running on Heroku by checking for the DYNO variable
+		if err := godotenv.Load(); err != nil {
+			log.Fatal("Error loading .env file:", err)
+		}
+	}
 
-	apiPort := os.Getenv("API_PORT")
+	// Get port dynamically assigned by Heroku, or default to 8080 locally
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	// Retrieve other environment variables
 	signalingPort := os.Getenv("SIGNALING_PORT")
 	frontendURL := os.Getenv("FRONTEND_URL")
 	dbType := os.Getenv("DB_TYPE")
 
 	requiredVars := map[string]string{
-		"API_PORT":       apiPort,
 		"SIGNALING_PORT": signalingPort,
 		"FRONTEND_URL":   frontendURL,
 		"DB_TYPE":        dbType,
 	}
 
+	// Check if required environment variables are set
 	for key, value := range requiredVars {
 		if value == "" {
 			log.Fatalf("❌ Missing required environment variable: %s", key)
@@ -45,10 +52,12 @@ func main() {
 
 	log.Println("📦 Database type:", dbType)
 
+	// Initialize the database
 	if err := config.InitDatabase(); err != nil {
 		log.Fatal("❌ Database initialization failed:", err)
 	}
 
+	// Set up the Fiber app
 	app := fiber.New()
 
 	app.Use(cors.New(cors.Config{
@@ -58,21 +67,19 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	// 🧠 Start signaling server in background (WebSocket)
+	// Start signaling server in the background (WebSocket)
 	go services.StartSignalingServer(signalingPort)
 
-	// 🧠 Setup Fiber API routes
+	// Set up API routes
 	routes.SetupRoutes(app)
 
-	// 🚀 Start HTTP API server
-	go func() {
-		log.Printf("🚀 Fiber API running on http://localhost:%s", apiPort)
-		if err := app.Listen(":" + apiPort); err != nil {
-			log.Fatal("❌ Failed to start API server:", err)
-		}
-	}()
+	// Start the HTTP API server, binding to the dynamic port on Heroku or default to 8080 locally
+	log.Printf("🚀 Fiber API running on http://localhost:%s", port)
+	if err := app.Listen(":" + port); err != nil {
+		log.Fatal("❌ Failed to start API server:", err)
+	}
 
-	// 🧹 Handle graceful shutdown
+	// Handle graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
