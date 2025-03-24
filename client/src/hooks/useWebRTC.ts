@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
 const SIGNALING_SERVER =
-  process.env.NEXT_PUBLIC_SIGNALING_SERVER || "ws://localhost:8081/ws";
+  process.env.NEXT_PUBLIC_SIGNALING_SERVER || "wss://localhost:8081/ws";
 
 type SharedMediaType = "image" | "pdf";
 
