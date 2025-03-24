@@ -30,3 +30,5 @@ vendor/
 Thumbs.db
 
 database.db
+
+plenum-backend
