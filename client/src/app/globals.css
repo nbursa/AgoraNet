@@ -53,6 +53,10 @@ body {
   box-sizing: inherit;
 }
 
-button:hover {
+button:enabled:hover {
   cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
 }

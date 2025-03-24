@@ -296,10 +296,15 @@ export default function RoomPage() {
               📁 {t("choose")}
             </button>
 
-            {localUserId === hostId && normalizedVoteHistory.length > 0 && (
+            {localUserId === hostId && (
               <button
                 onClick={() => setShowVoteHistory((prev) => !prev)}
-                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm"
+                className={`bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm ${
+                  normalizedVoteHistory.length === 0
+                    ? "opacity-50 cursor-not-allowed"
+                    : ""
+                }`}
+                disabled={normalizedVoteHistory.length === 0}
               >
                 {showVoteHistory ? t("hide-history") : t("show-history")}
               </button>
