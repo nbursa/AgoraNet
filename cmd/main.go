@@ -19,7 +19,7 @@ import (
 func main() {
 	fmt.Println("Starting Decentralized Plenum Backend...")
 
-	if os.Getenv("HEROKU") == "" {
+	if os.Getenv("DYNO") == "" {
         if err := godotenv.Load(); err != nil {
             log.Fatal("Error loading .env file:", err)
         }
