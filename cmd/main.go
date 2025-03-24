@@ -19,9 +19,11 @@ import (
 func main() {
 	fmt.Println("Starting Decentralized Plenum Backend...")
 
-	if err := godotenv.Load(); err != nil {
-		log.Fatal("Error loading .env file:", err)
-	}
+	if os.Getenv("HEROKU") == "" {
+        if err := godotenv.Load(); err != nil {
+            log.Fatal("Error loading .env file:", err)
+        }
+    }
 
 	apiPort := os.Getenv("API_PORT")
 	signalingPort := os.Getenv("SIGNALING_PORT")
