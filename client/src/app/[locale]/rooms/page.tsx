@@ -27,16 +27,6 @@ export default function RoomsPage() {
     const updatedRooms = [...rooms, newRoomId];
     setRooms(updatedRooms);
     localStorage.setItem("activeRooms", JSON.stringify(updatedRooms));
-
-    try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/create-room`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roomId: newRoomId }),
-      });
-    } catch (error) {
-      console.error("Failed to notify backend about room creation:", error);
-    }
   };
 
   const closeRoom = async (roomId: string) => {
