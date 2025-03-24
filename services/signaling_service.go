@@ -40,14 +40,13 @@ type Room struct {
 var (
 	upgrader = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
-			// origin := r.Header.Get("Origin")
-			// frontendURL := os.Getenv("FRONTEND_URL")
-			// if origin == frontendURL {
-			// 	return true
-			// }
-			// log.Printf("❌ Unauthorized WebSocket connection attempt from %s", origin)
-			// return false
-			return true
+			origin := r.Header.Get("Origin")
+			frontendURL := os.Getenv("FRONTEND_URL")
+			if origin == frontendURL {
+				return true
+			}
+			log.Printf("❌ Unauthorized WebSocket connection attempt from %s", origin)
+			return false
 		},
 	}
 	clients  = make(map[string]*Client)

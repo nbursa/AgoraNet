@@ -31,6 +31,10 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
+	signalPort := os.Getenv("SIGNALING_PORT")
+	if signalPort == "" {
+		signalPort = "8081"
+	}
 
 	frontendURL := os.Getenv("FRONTEND_URL")
 	dbType := os.Getenv("DB_TYPE")
@@ -52,13 +56,6 @@ func main() {
 		log.Fatal("❌ DB init failed:", err)
 	}
 
-	// Create listener on same port
-	ln, err := net.Listen("tcp", ":"+port)
-	if err != nil {
-		log.Fatalf("❌ Failed to listen on port %s: %v", port, err)
-	}
-
-	// Setup Fiber
 	app := fiber.New()
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     frontendURL,
@@ -68,27 +65,41 @@ func main() {
 	}))
 	routes.SetupRoutes(app)
 
-	// Serve Fiber
-	go func() {
-		log.Printf("🚀 Fiber API running on http://localhost:%s", port)
-		if err := app.Listener(ln); err != nil {
-			log.Fatalf("❌ Fiber failed: %v", err)
+	if os.Getenv("DYNO") != "" {
+		// Heroku: shared port for Fiber + WebSocket
+		ln, err := net.Listen("tcp", ":"+port)
+		if err != nil {
+			log.Fatalf("❌ Failed to listen: %v", err)
 		}
-	}()
 
-	// Serve WebSockets
-	go func() {
-		log.Printf("🔌 WebSocket routes attached on /ws and /dashboard")
-		http.HandleFunc("/ws", services.HandleWebSocket)
-		http.HandleFunc("/dashboard", services.HandleDashboardSocket)
-		if err := http.Serve(ln, nil); err != nil {
-			log.Fatalf("❌ WebSocket server failed: %v", err)
+		go func() {
+			log.Printf("🚀 Fiber running on http://localhost:%s", port)
+			if err := app.Listener(ln); err != nil {
+				log.Fatalf("❌ Fiber failed: %v", err)
+			}
+		}()
+
+		go func() {
+			mux := http.NewServeMux()
+			mux.HandleFunc("/ws", services.HandleWebSocket)
+			mux.HandleFunc("/dashboard", services.HandleDashboardSocket)
+			if err := http.Serve(ln, mux); err != nil {
+				log.Fatalf("❌ WebSocket server failed: %v", err)
+			}
+		}()
+	} else {
+		// Local dev: separate ports
+		go services.StartSignalingServer(signalPort)
+
+		log.Printf("🚀 Fiber running on http://localhost:%s", port)
+		if err := app.Listen(":" + port); err != nil {
+			log.Fatal("❌ Fiber failed:", err)
 		}
-	}()
+	}
 
 	// Graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
-	log.Println("🛑 Shutting down...")
+	log.Println("🛑 Shutting down server...")
 }
