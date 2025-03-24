@@ -3,7 +3,11 @@ package main
 import (
 	"fmt"
 	"log"
+	"net"
+	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -17,7 +21,6 @@ import (
 func main() {
 	fmt.Println("Starting Decentralized Plenum Backend...")
 
-	// Load .env locally (not on Heroku)
 	if os.Getenv("DYNO") == "" {
 		if err := godotenv.Load(); err != nil {
 			log.Fatal("Error loading .env file:", err)
@@ -27,11 +30,6 @@ func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
-	}
-
-	signalingPort := os.Getenv("SIGNALING_PORT")
-	if signalingPort == "" {
-		signalingPort = "8081"
 	}
 
 	frontendURL := os.Getenv("FRONTEND_URL")
@@ -54,10 +52,13 @@ func main() {
 		log.Fatal("❌ DB init failed:", err)
 	}
 
-	// Start WebSocket server in background
-	go services.StartSignalingServer(signalingPort)
+	// Create listener on same port
+	ln, err := net.Listen("tcp", ":"+port)
+	if err != nil {
+		log.Fatalf("❌ Failed to listen on port %s: %v", port, err)
+	}
 
-	// Start Fiber HTTP API
+	// Setup Fiber
 	app := fiber.New()
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     frontendURL,
@@ -65,11 +66,29 @@ func main() {
 		AllowHeaders:     "Content-Type, Authorization",
 		AllowCredentials: true,
 	}))
-
 	routes.SetupRoutes(app)
 
-	log.Printf("🚀 Fiber API running on http://localhost:%s", port)
-	if err := app.Listen(":" + port); err != nil {
-		log.Fatal("❌ Failed to start Fiber server:", err)
-	}
+	// Serve Fiber
+	go func() {
+		log.Printf("🚀 Fiber API running on http://localhost:%s", port)
+		if err := app.Listener(ln); err != nil {
+			log.Fatalf("❌ Fiber failed: %v", err)
+		}
+	}()
+
+	// Serve WebSockets
+	go func() {
+		log.Printf("🔌 WebSocket routes attached on /ws and /dashboard")
+		http.HandleFunc("/ws", services.HandleWebSocket)
+		http.HandleFunc("/dashboard", services.HandleDashboardSocket)
+		if err := http.Serve(ln, nil); err != nil {
+			log.Fatalf("❌ WebSocket server failed: %v", err)
+		}
+	}()
+
+	// Graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+	log.Println("🛑 Shutting down...")
 }
