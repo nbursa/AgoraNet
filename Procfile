@@ -1,1 +1,1 @@
-web: ./plenum-backend
+web: ./main
