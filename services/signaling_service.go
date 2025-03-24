@@ -39,7 +39,6 @@ type Room struct {
 
 var (
 	upgrader = websocket.Upgrader{
-		// Restrict WebSocket connections only from the frontend URL
 		CheckOrigin: func(r *http.Request) bool {
 			origin := r.Header.Get("Origin")
 			frontendURL := os.Getenv("FRONTEND_URL")
@@ -57,15 +56,14 @@ var (
 
 func StartSignalingServer(port string) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/ws", handleWebSocket)
-	mux.HandleFunc("/dashboard", handleDashboardSocket)
+	mux.HandleFunc("/ws", HandleWebSocket)
+	mux.HandleFunc("/dashboard", HandleDashboardSocket)
 
 	srv := &http.Server{
 		Addr:    ":" + port,
 		Handler: mux,
 	}
 
-	// Start the WebSocket signaling server
 	go func() {
 		log.Println("✅ WebSocket signaling server running on ws://localhost:" + port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -83,118 +81,36 @@ func StartSignalingServer(port string) {
 		defer cancel()
 
 		log.Println("🔒 Closing connections and cleaning up resources")
-		// Close all active WebSocket connections
 		for _, client := range clients {
-			err := client.Conn.Close()
-			if err != nil {
-				log.Printf("❌ Error closing WebSocket connection for client %s: %v", client.ID, err)
-			} else {
-				log.Printf("Successfully closed WebSocket connection for client %s", client.ID)
-			}
+			_ = client.Conn.Close()
+			log.Printf("Closed connection for client %s", client.ID)
 		}
 
-		// Shut down the HTTP server gracefully
 		if err := srv.Shutdown(ctx); err != nil {
 			log.Fatalf("❌ Server shutdown failed: %v", err)
 		}
 		log.Println("✅ Server shutdown gracefully")
-
-		// Exit the process explicitly after cleanup
 		os.Exit(0)
 	}()
 }
 
-func handleWebSocket(w http.ResponseWriter, r *http.Request) {
-	log.Printf("🔌 WebSocket connection request from %s", r.RemoteAddr)
-
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println("❌ Upgrade error:", err)
-		return
-	}
-
-	// Reading the init message
-	_, msgBytes, err := conn.ReadMessage()
-	if err != nil {
-		log.Println("❌ Failed to read init message:", err)
-		conn.Close()
-		return
-	}
-
-	var initMsg map[string]interface{}
-	if err := json.Unmarshal(msgBytes, &initMsg); err != nil {
-		log.Println("❌ Invalid JSON in init message:", err)
-		conn.Close()
-		return
-	}
-
-	if initMsg["type"] != "init" {
-		log.Println("❌ First message must be 'init'")
-		conn.Close()
-		return
-	}
-
-	providedID, _ := initMsg["userId"].(string)
-	clientID := providedID
-	if clientID == "" {
-		clientID = uuid.New().String()
-	}
-
-	client := &Client{ID: clientID, Conn: conn}
-	clients[clientID] = client
-
-	log.Println("🔌 Connected:", clientID)
-
-	// Send back the userId
-	err = conn.WriteJSON(map[string]interface{}{
-		"type":   "init",
-		"userId": clientID,
-	})
-	if err != nil {
-		conn.Close()
-		return
-	}
-
-	defer func() {
+func handleMessage(client *Client, msg map[string]interface{}) {
+	switch msg["type"] {
+	case "join":
+		if roomID, ok := msg["roomId"].(string); ok {
+			client.RoomID = roomID
+			registerClient(roomID, client)
+		}
+	case "offer", "answer", "ice-candidate":
+		if targetID, ok := msg["userId"].(string); ok {
+			msg["from"] = client.ID
+			forwardMessage(targetID, msg)
+		}
+	case "leave":
 		removeClient(client)
-		conn.Close()
-		log.Println("❌ Disconnected:", clientID)
-	}()
-
-	// Handle incoming messages
-	for {
-		_, rawMessage, err := conn.ReadMessage()
-		if err != nil {
-			break
-		}
-
-		var msg map[string]interface{}
-		if err := json.Unmarshal(rawMessage, &msg); err != nil {
-			continue
-		}
-
-		switch msg["type"] {
-		case "join":
-			roomID, ok := msg["roomId"].(string)
-			if ok {
-				client.RoomID = roomID
-				registerClient(roomID, client)
-			}
-
-		case "offer", "answer", "ice-candidate":
-			targetID, ok := msg["userId"].(string)
-			if ok {
-				msg["from"] = client.ID
-				forwardMessage(targetID, msg)
-			}
-
-		case "leave":
-			removeClient(client)
-
-		case "share-media":
-			url, ok := msg["url"].(string)
-			mediaType, ok2 := msg["mediaType"].(string)
-			if ok && ok2 {
+	case "share-media":
+		if url, ok := msg["url"].(string); ok {
+			if mediaType, ok2 := msg["mediaType"].(string); ok2 {
 				roomLock.Lock()
 				if room, exists := rooms[client.RoomID]; exists {
 					room.LastMedia = map[string]interface{}{
@@ -207,46 +123,42 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				}
 				roomLock.Unlock()
 			}
-
-		case "create-vote":
-			question, ok := msg["question"].(string)
-			if ok {
-				roomLock.Lock()
-				if room, exists := rooms[client.RoomID]; exists && room.HostID == client.ID {
-					room.ActiveVote = question
-					room.CurrentVotes = make(map[string]string)
-					broadcastRoomState(client.RoomID)
-				}
-				roomLock.Unlock()
-			}
-
-		case "end-vote":
+		}
+	case "create-vote":
+		if question, ok := msg["question"].(string); ok {
 			roomLock.Lock()
 			if room, exists := rooms[client.RoomID]; exists && room.HostID == client.ID {
-				if room.ActiveVote != "" {
-					vote := PastVote{
-						Question:   room.ActiveVote,
-						TotalVotes: len(room.CurrentVotes),
-					}
-					for _, v := range room.CurrentVotes {
-						if v == "yes" {
-							vote.YesCount++
-						} else if v == "no" {
-							vote.NoCount++
-						}
-					}
-					room.PastVotes = append(room.PastVotes, vote)
-				}
-				room.ActiveVote = ""
+				room.ActiveVote = question
 				room.CurrentVotes = make(map[string]string)
 				broadcastRoomState(client.RoomID)
 			}
 			roomLock.Unlock()
-
-		case "vote":
-			userID, ok1 := msg["userId"].(string)
-			value, ok2 := msg["value"].(string)
-			if ok1 && ok2 {
+		}
+	case "end-vote":
+		roomLock.Lock()
+		if room, exists := rooms[client.RoomID]; exists && room.HostID == client.ID {
+			if room.ActiveVote != "" {
+				vote := PastVote{
+					Question:   room.ActiveVote,
+					TotalVotes: len(room.CurrentVotes),
+				}
+				for _, v := range room.CurrentVotes {
+					if v == "yes" {
+						vote.YesCount++
+					} else if v == "no" {
+						vote.NoCount++
+					}
+				}
+				room.PastVotes = append(room.PastVotes, vote)
+			}
+			room.ActiveVote = ""
+			room.CurrentVotes = make(map[string]string)
+			broadcastRoomState(client.RoomID)
+		}
+		roomLock.Unlock()
+	case "vote":
+		if userID, ok1 := msg["userId"].(string); ok1 {
+			if value, ok2 := msg["value"].(string); ok2 {
 				roomLock.Lock()
 				if room, exists := rooms[client.RoomID]; exists && room.ActiveVote != "" {
 					room.CurrentVotes[userID] = value
@@ -254,17 +166,115 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				}
 				roomLock.Unlock()
 			}
-
-		case "speaking":
-			isSpeaking, ok := msg["isSpeaking"].(bool)
-			if ok {
-				broadcastMessage(client.RoomID, map[string]interface{}{
-					"type":       "speaking",
-					"userId":     client.ID,
-					"isSpeaking": isSpeaking,
-				})
-			}
 		}
+	case "speaking":
+		if isSpeaking, ok := msg["isSpeaking"].(bool); ok {
+			broadcastMessage(client.RoomID, map[string]interface{}{
+				"type":       "speaking",
+				"userId":     client.ID,
+				"isSpeaking": isSpeaking,
+			})
+		}
+	}
+}
+
+func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
+	log.Printf("🔌 WebSocket connection request from %s", r.RemoteAddr)
+
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println("❌ Upgrade error:", err)
+		return
+	}
+
+	defer conn.Close()
+
+	_, msgBytes, err := conn.ReadMessage()
+	if err != nil {
+		log.Println("❌ Failed to read init message:", err)
+		return
+	}
+
+	var initMsg map[string]interface{}
+	if err := json.Unmarshal(msgBytes, &initMsg); err != nil {
+		log.Println("❌ Invalid JSON in init message:", err)
+		return
+	}
+
+	if initMsg["type"] != "init" {
+		log.Println("❌ First message must be 'init'")
+		return
+	}
+
+	providedID, _ := initMsg["userId"].(string)
+	clientID := providedID
+	if clientID == "" {
+		clientID = uuid.New().String()
+	}
+
+	client := &Client{ID: clientID, Conn: conn}
+	clients[clientID] = client
+	log.Println("🔌 Connected:", clientID)
+
+	_ = conn.WriteJSON(map[string]interface{}{ "type": "init", "userId": clientID })
+
+	defer func() {
+		removeClient(client)
+		log.Println("❌ Disconnected:", clientID)
+	}()
+
+	for {
+		_, rawMessage, err := conn.ReadMessage()
+		if err != nil {
+			break
+		}
+
+		var msg map[string]interface{}
+		if err := json.Unmarshal(rawMessage, &msg); err != nil {
+			continue
+		}
+
+		handleMessage(client, msg)
+	}
+}
+
+func HandleDashboardSocket(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println("❌ Dashboard upgrade error:", err)
+		return
+	}
+	defer conn.Close()
+
+	for {
+		time.Sleep(2 * time.Second)
+		roomLock.Lock()
+		var summaries []map[string]interface{}
+		for roomID, room := range rooms {
+			summary := map[string]interface{}{
+				"roomId":           roomID,
+				"hostId":           room.HostID,
+				"participantCount": len(room.Clients),
+			}
+			if room.ActiveVote != "" {
+				yes, no := 0, 0
+				for _, v := range room.CurrentVotes {
+					if v == "yes" {
+						yes++
+					} else if v == "no" {
+						no++
+					}
+				}
+				summary["activeVote"] = map[string]interface{}{
+					"question": room.ActiveVote,
+					"yes":      yes,
+					"no":       no,
+				}
+			}
+			summaries = append(summaries, summary)
+		}
+		roomLock.Unlock()
+		conn.WriteJSON(map[string]interface{}{ "type": "dashboard-summary", "rooms": summaries })
 	}
 }
 
