@@ -39,8 +39,15 @@ type Room struct {
 
 var (
 	upgrader = websocket.Upgrader{
+		// Restrict WebSocket connections only from the frontend URL
 		CheckOrigin: func(r *http.Request) bool {
-			return true
+			origin := r.Header.Get("Origin")
+			frontendURL := os.Getenv("FRONTEND_URL")
+			if origin == frontendURL {
+				return true
+			}
+			log.Printf("❌ Unauthorized WebSocket connection attempt from %s", origin)
+			return false
 		},
 	}
 	clients  = make(map[string]*Client)
@@ -78,12 +85,15 @@ func StartSignalingServer(port string) {
 }
 
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	log.Printf("🔌 WebSocket connection request from %s", r.RemoteAddr)
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("❌ Upgrade error:", err)
 		return
 	}
 
+	// Reading the init message
 	_, msgBytes, err := conn.ReadMessage()
 	if err != nil {
 		log.Println("❌ Failed to read init message:", err)
@@ -115,6 +125,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("🔌 Connected:", clientID)
 
+	// Send back the userId
 	err = conn.WriteJSON(map[string]interface{}{
 		"type":   "init",
 		"userId": clientID,
@@ -130,6 +141,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		log.Println("❌ Disconnected:", clientID)
 	}()
 
+	// Handle incoming messages
 	for {
 		_, rawMessage, err := conn.ReadMessage()
 		if err != nil {
