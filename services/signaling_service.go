@@ -65,6 +65,7 @@ func StartSignalingServer(port string) {
 		Handler: mux,
 	}
 
+	// Start the WebSocket signaling server
 	go func() {
 		log.Println("✅ WebSocket signaling server running on ws://localhost:" + port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -80,7 +81,26 @@ func StartSignalingServer(port string) {
 		log.Println("🛑 Shutting down WebSocket server...")
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		srv.Shutdown(ctx)
+
+		log.Println("🔒 Closing connections and cleaning up resources")
+		// Close all active WebSocket connections
+		for _, client := range clients {
+			err := client.Conn.Close()
+			if err != nil {
+				log.Printf("❌ Error closing WebSocket connection for client %s: %v", client.ID, err)
+			} else {
+				log.Printf("Successfully closed WebSocket connection for client %s", client.ID)
+			}
+		}
+
+		// Shut down the HTTP server gracefully
+		if err := srv.Shutdown(ctx); err != nil {
+			log.Fatalf("❌ Server shutdown failed: %v", err)
+		}
+		log.Println("✅ Server shutdown gracefully")
+
+		// Exit the process explicitly after cleanup
+		os.Exit(0)
 	}()
 }
 
@@ -276,11 +296,24 @@ func removeClient(client *Client) {
 	roomLock.Lock()
 	defer roomLock.Unlock()
 
+	// Log that you're about to close the connection
+	log.Printf("Closing connection for client %s", client.ID)
+
+	// Close the WebSocket connection
+	err := client.Conn.Close()
+	if err != nil {
+		log.Printf("Error closing WebSocket connection for client %s: %v", client.ID, err)
+	} else {
+		log.Printf("Successfully closed WebSocket connection for client %s", client.ID)
+	}
+
 	delete(clients, client.ID)
 
+	// Remove client from the room
 	if room, exists := rooms[client.RoomID]; exists {
 		delete(room.Clients, client.ID)
 
+		// Notify others that this client left
 		for _, peer := range room.Clients {
 			peer.Conn.WriteJSON(map[string]interface{}{
 				"type":   "leave",
