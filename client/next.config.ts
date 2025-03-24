@@ -11,11 +11,16 @@ const nextConfig: NextConfig = {
   },
 
   env: {
-    NEXT_PUBLIC_SIGNALING_SERVER: "ws://localhost:8081/ws",
+    NEXT_PUBLIC_SIGNALING_SERVER:
+      process.env.NEXT_PUBLIC_SIGNALING_SERVER || "ws://localhost:8081/ws",
   },
 
   images: {
-    domains: ["localhost"],
+    domains: [
+      process.env.NODE_ENV === "production"
+        ? process.env.NEXT_PUBLIC_API_URL ?? "localhost"
+        : "localhost",
+    ],
   },
 };
 
