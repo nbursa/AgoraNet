@@ -1,6 +1,7 @@
 # Decentralized Plenum
 
 ![Status](https://img.shields.io/badge/status-in_development-yellow) ![License](https://img.shields.io/badge/license-custom-lightgrey)
+[Architecture Overview](./ARCHITECTURE.md) • [License](./LICENSE.md)
 
 **Decentralized Plenum** is an innovative peer-to-peer platform designed for secure, anonymous, and censorship-resistant digital communication and decision-making. Plenum enables users to create decentralized voice rooms, hold anonymous or public votes, and securely share media.
 
