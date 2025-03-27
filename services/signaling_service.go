@@ -242,6 +242,9 @@ func registerClient(roomID string, client *Client) {
 		log.Printf("👑 Created room %s (host: %s)", roomID, client.ID)
 	} else {
 		log.Printf("🔁 Joined room %s: %s", roomID, client.ID)
+		if room.HostID == "" {
+			log.Printf("⚠️ Room %s has no host, denying host reassignment.", roomID)
+		}
 	}
 
 	room.Clients[client.ID] = client
@@ -254,7 +257,6 @@ func removeClient(client *Client) {
 
 	log.Printf("Closing connection for client %s", client.ID)
 
-	// Close the WebSocket connection
 	err := client.Conn.Close()
 	if err != nil {
 		log.Printf("Error closing WebSocket connection for client %s: %v", client.ID, err)
@@ -264,16 +266,14 @@ func removeClient(client *Client) {
 
 	delete(clients, client.ID)
 
-	// Remove client from the room
 	if room, exists := rooms[client.RoomID]; exists {
 		delete(room.Clients, client.ID)
 
-		// Notify others that this client left
 		for _, peer := range room.Clients {
 			peer.mu.Lock()
 			_ = peer.Conn.WriteJSON(map[string]interface{}{
-			"type":   "leave",
-			"userId": client.ID,
+				"type":   "leave",
+				"userId": client.ID,
 			})
 			peer.mu.Unlock()
 		}
