@@ -1,35 +1,44 @@
-# 🗣️ Decentralized Plenum
+# Decentralized Plenum
 
-**Decentralized, real-time voice discussion platform** built with **Go (Gin, Fiber), WebRTC, Socket.io, and Next.js**. Enables **secure, censorship-resistant, and self-hosted** voice communication.
+**Decentralized Plenum** is an innovative peer-to-peer platform designed for secure, anonymous, and censorship-resistant digital communication and decision-making. Inspired by platforms like X Spaces, Plenum enables users to create decentralized voice rooms, hold anonymous or public votes, and securely share media.
 
-## 🚀 Features
+## Features
 
-✅ **WebRTC P2P Voice** – Secure real-time voice communication  
-✅ **Decentralized Architecture** – No central authority  
-✅ **WebSocket Signaling** – Powered by **Socket.io & Gin**  
-✅ **Room Management** – Create, join, and close rooms dynamically  
-✅ **Self-Hosted & Privacy-Focused** – No third-party dependencies
+### Current Features
 
-## 🏗️ Tech Stack
+- **Peer-to-peer audio rooms** powered by WebRTC (with Go-based signaling server).
+- **Anonymous participation**: Users can join voice rooms via unique links without revealing their identity.
+- **Real-time media sharing**: Supports image and PDF uploads, previews, and secure distribution.
+- **Instant voting system**: Hosts can initiate anonymous yes/no votes, with live synchronization across participants.
+- **Persistent vote history** (for hosts only): Votes are securely stored client-side using IndexedDB.
+- **Internationalization (i18n)**: Currently supports Serbian and English.
 
-- **Backend:** Go (Gin, Fiber, Socket.io)
-- **Frontend:** Next.js (React, TypeScript)
-- **WebRTC:** Peer-to-peer audio streaming
-- **Database:** SQLite (Temporary)
+### Upcoming Features
 
-## 🚀 Quick Start
+- **Advanced voting options**: Multiple-choice, ranked-choice, and time-bound voting.
+- **Collaborative proposal writing tools**: Community-driven document drafting.
+- **Role-based access control**: Moderators, speakers, and listeners assigned by the community.
+- **Self-sovereign identity (SSI)**: Optional pseudonymous verification.
+- **End-to-end encryption** for chat, audio streams, and metadata.
+- **Decentralized hosting**: Full decentralization via IPFS or mesh overlay networks.
 
-### 1️⃣ Run Backend (Go)
+## Technical Stack
 
-```sh
-cd backend
-go run cmd/main.go
-```
+- **Frontend:** Next.js (App Router), React.js, Tailwind CSS, Zustand, TypeScript
+- **Backend:** Go (Gorilla WebSocket), SQLite, WebRTC Signaling
+- **Storage:** IndexedDB (Dexie.js)
+- **Deployment:** Heroku (Frontend), Heroku (Backend)
 
-### 2️⃣ Run Frontend (Next.js)
+## Architecture Overview
 
-```sh
-cd frontend
-npm install
-npm run dev
-```
+Decentralized Plenum leverages a modular architecture to ensure clear separation of concerns:
+
+- **Frontend** manages UI, real-time interactions (WebRTC), and persistent client-side state.
+- **Backend** handles WebRTC signaling, real-time message broadcasting, room state persistence, and synchronization.
+- **Client-side storage** ensures data privacy and security via IndexedDB.
+
+## Licensing and Contribution
+
+This repository is public for demonstration purposes and is still under active development. Contributions are welcome, and the project will soon be open-sourced under an appropriate permissive license (likely MIT or AGPLv3).
+
+© 2025 Nenad Bursać. All rights reserved.
