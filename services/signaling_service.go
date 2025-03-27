@@ -4,20 +4,20 @@ import (
 	"context"
 	"encoding/json"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 	"time"
 
+	"github.com/gofiber/fiber/v2"
+	ws "github.com/gofiber/websocket/v2"
 	"github.com/google/uuid"
-	"github.com/gorilla/websocket"
 )
 
 type Client struct {
 	ID     string
-	Conn   *websocket.Conn
+	Conn   *ws.Conn
 	RoomID string
 }
 
@@ -38,35 +38,33 @@ type Room struct {
 }
 
 var (
-	upgrader = websocket.Upgrader{
-		CheckOrigin: func(r *http.Request) bool {
-			origin := r.Header.Get("Origin")
-			frontendURL := os.Getenv("FRONTEND_URL")
-			if origin == frontendURL {
-				return true
-			}
-			log.Printf("❌ Unauthorized WebSocket connection attempt from %s", origin)
-			return false
-		},
-	}
-	clients  = make(map[string]*Client)
-	rooms    = make(map[string]*Room)
 	roomLock sync.Mutex
+	rooms    = make(map[string]*Room)
+	clients  = make(map[string]*Client)
 )
 
 func StartSignalingServer(port string) {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/ws", HandleWebSocket)
-	mux.HandleFunc("/dashboard", HandleDashboardSocket)
+	app := fiber.New()
 
-	srv := &http.Server{
-		Addr:    ":" + port,
-		Handler: mux,
-	}
+	app.Use("/ws", func(c *fiber.Ctx) error {
+		if ws.IsWebSocketUpgrade(c) {
+			return c.Next()
+		}
+		return fiber.ErrUpgradeRequired
+	})
+	app.Get("/ws", ws.New(HandleWebSocket))
+
+	app.Use("/dashboard", func(c *fiber.Ctx) error {
+		if ws.IsWebSocketUpgrade(c) {
+			return c.Next()
+		}
+		return fiber.ErrUpgradeRequired
+	})
+	app.Get("/dashboard", ws.New(HandleDashboardSocket))
 
 	go func() {
-		log.Println("✅ WebSocket signaling server running on ws://localhost:" + port)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Println("✅ Fiber WebSocket signaling server running on ws://localhost:" + port)
+		if err := app.Listen(":" + port); err != nil {
 			log.Fatalf("❌ Server error: %v", err)
 		}
 	}()
@@ -80,15 +78,7 @@ func StartSignalingServer(port string) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		log.Println("🔒 Closing connections and cleaning up resources")
-		for _, client := range clients {
-			_ = client.Conn.Close()
-			log.Printf("Closed connection for client %s", client.ID)
-		}
-
-		if err := srv.Shutdown(ctx); err != nil {
-			log.Fatalf("❌ Server shutdown failed: %v", err)
-		}
+		_ = app.ShutdownWithContext(ctx)
 		log.Println("✅ Server shutdown gracefully")
 		os.Exit(0)
 	}()
@@ -178,18 +168,18 @@ func handleMessage(client *Client, msg map[string]interface{}) {
 	}
 }
 
-func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
-	log.Printf("🔌 WebSocket connection request from %s", r.RemoteAddr)
+func HandleWebSocket(c *ws.Conn) {
+	clientID := ""
+	defer func() {
+		if clientID != "" {
+			if client, ok := clients[clientID]; ok {
+				removeClient(client)
+				log.Println("❌ Disconnected:", clientID)
+			}
+		}
+	}()
 
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println("❌ Upgrade error:", err)
-		return
-	}
-
-	defer conn.Close()
-
-	_, msgBytes, err := conn.ReadMessage()
+	_, msgBytes, err := c.ReadMessage()
 	if err != nil {
 		log.Println("❌ Failed to read init message:", err)
 		return
@@ -207,24 +197,20 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	providedID, _ := initMsg["userId"].(string)
-	clientID := providedID
+	clientID = providedID
 	if clientID == "" {
 		clientID = uuid.New().String()
 	}
 
-	client := &Client{ID: clientID, Conn: conn}
+	// client := &Client{ID: clientID, Conn: wrapConn(c)}
+	client := &Client{ID: clientID, Conn: c}
 	clients[clientID] = client
 	log.Println("🔌 Connected:", clientID)
 
-	_ = conn.WriteJSON(map[string]interface{}{ "type": "init", "userId": clientID })
-
-	defer func() {
-		removeClient(client)
-		log.Println("❌ Disconnected:", clientID)
-	}()
+	_ = c.WriteJSON(map[string]interface{}{"type": "init", "userId": clientID})
 
 	for {
-		_, rawMessage, err := conn.ReadMessage()
+		_, rawMessage, err := c.ReadMessage()
 		if err != nil {
 			break
 		}
@@ -235,46 +221,6 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		}
 
 		handleMessage(client, msg)
-	}
-}
-
-func HandleDashboardSocket(w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println("❌ Dashboard upgrade error:", err)
-		return
-	}
-	defer conn.Close()
-
-	for {
-		time.Sleep(2 * time.Second)
-		roomLock.Lock()
-		var summaries []map[string]interface{}
-		for roomID, room := range rooms {
-			summary := map[string]interface{}{
-				"roomId":           roomID,
-				"hostId":           room.HostID,
-				"participantCount": len(room.Clients),
-			}
-			if room.ActiveVote != "" {
-				yes, no := 0, 0
-				for _, v := range room.CurrentVotes {
-					if v == "yes" {
-						yes++
-					} else if v == "no" {
-						no++
-					}
-				}
-				summary["activeVote"] = map[string]interface{}{
-					"question": room.ActiveVote,
-					"yes":      yes,
-					"no":       no,
-				}
-			}
-			summaries = append(summaries, summary)
-		}
-		roomLock.Unlock()
-		conn.WriteJSON(map[string]interface{}{ "type": "dashboard-summary", "rooms": summaries })
 	}
 }
 
@@ -388,14 +334,7 @@ func broadcastRoomState(roomID string) {
 	}
 }
 
-func handleDashboardSocket(w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println("❌ Dashboard upgrade error:", err)
-		return
-	}
-	defer conn.Close()
-
+func HandleDashboardSocket(c *ws.Conn) {
 	for {
 		time.Sleep(2 * time.Second)
 
@@ -426,9 +365,13 @@ func handleDashboardSocket(w http.ResponseWriter, r *http.Request) {
 		}
 		roomLock.Unlock()
 
-		conn.WriteJSON(map[string]interface{}{
+		err := c.WriteJSON(map[string]interface{}{
 			"type":  "dashboard-summary",
 			"rooms": summaries,
 		})
+		if err != nil {
+			log.Println("❌ Write error:", err)
+			break
+		}
 	}
 }

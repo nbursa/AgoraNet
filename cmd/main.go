@@ -3,15 +3,15 @@ package main
 import (
 	"fmt"
 	"log"
-	"net"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/joho/godotenv"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/joho/godotenv"
+	ws "github.com/gofiber/websocket/v2"
 
 	"github.com/nbursa/decentralized-plenum/config"
 	"github.com/nbursa/decentralized-plenum/routes"
@@ -65,35 +65,38 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	// ✅ Handle preflight OPTIONS globally
 	app.Options("/*", func(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusNoContent)
 	})
 
+	// 🔗 Register HTTP routes
 	routes.SetupRoutes(app)
 
-	if os.Getenv("DYNO") != "" {
-		ln, err := net.Listen("tcp", ":"+port)
-		if err != nil {
-			log.Fatalf("❌ Failed to listen: %v", err)
+	// ✅ WebSocket endpoints (Fiber-native)
+	app.Use("/ws", func(c *fiber.Ctx) error {
+		if ws.IsWebSocketUpgrade(c) {
+			return c.Next()
 		}
+		return fiber.ErrUpgradeRequired
+	})
+	app.Get("/ws", ws.New(services.HandleWebSocket))
 
-		go func() {
-			log.Printf("🚀 Fiber running on http://localhost:%s", port)
-			if err := app.Listener(ln); err != nil {
-				log.Fatalf("❌ Fiber failed: %v", err)
-			}
-		}()
+	app.Use("/dashboard", func(c *fiber.Ctx) error {
+		if ws.IsWebSocketUpgrade(c) {
+			return c.Next()
+		}
+		return fiber.ErrUpgradeRequired
+	})
+	app.Get("/dashboard", ws.New(services.HandleDashboardSocket))
 
-		go func() {
-			mux := http.NewServeMux()
-			mux.HandleFunc("/ws", services.HandleWebSocket)
-			mux.HandleFunc("/dashboard", services.HandleDashboardSocket)
-			if err := http.Serve(ln, mux); err != nil {
-				log.Fatalf("❌ WebSocket server failed: %v", err)
-			}
-		}()
+	// 🌍 Start server
+	if os.Getenv("DYNO") != "" {
+		log.Printf("🚀 Running on Heroku shared port: %s", port)
+		if err := app.Listen(":" + port); err != nil {
+			log.Fatalf("❌ Fiber failed: %v", err)
+		}
 	} else {
+		// Local dev: run WebSocket on separate port
 		go services.StartSignalingServer(signalPort)
 
 		log.Printf("🚀 Fiber running on http://localhost:%s", port)
@@ -102,6 +105,7 @@ func main() {
 		}
 	}
 
+	// Graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
