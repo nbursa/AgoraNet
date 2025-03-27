@@ -57,16 +57,22 @@ func main() {
 	}
 
 	app := fiber.New()
+
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     frontendURL,
 		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
 		AllowHeaders:     "Content-Type, Authorization",
 		AllowCredentials: true,
 	}))
+
+	// ✅ Handle preflight OPTIONS globally
+	app.Options("/*", func(c *fiber.Ctx) error {
+		return c.SendStatus(fiber.StatusNoContent)
+	})
+
 	routes.SetupRoutes(app)
 
 	if os.Getenv("DYNO") != "" {
-		// Heroku: shared port for Fiber + WebSocket
 		ln, err := net.Listen("tcp", ":"+port)
 		if err != nil {
 			log.Fatalf("❌ Failed to listen: %v", err)
@@ -88,7 +94,6 @@ func main() {
 			}
 		}()
 	} else {
-		// Local dev: separate ports
 		go services.StartSignalingServer(signalPort)
 
 		log.Printf("🚀 Fiber running on http://localhost:%s", port)
@@ -97,7 +102,6 @@ func main() {
 		}
 	}
 
-	// Graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
