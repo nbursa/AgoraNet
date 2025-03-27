@@ -1,6 +1,8 @@
 # Decentralized Plenum
 
-**Decentralized Plenum** is an innovative peer-to-peer platform designed for secure, anonymous, and censorship-resistant digital communication and decision-making. Inspired by platforms like X Spaces, Plenum enables users to create decentralized voice rooms, hold anonymous or public votes, and securely share media.
+![Status](https://img.shields.io/badge/status-in_development-yellow) ![License](https://img.shields.io/badge/license-custom-lightgrey)
+
+**Decentralized Plenum** is an innovative peer-to-peer platform designed for secure, anonymous, and censorship-resistant digital communication and decision-making. Plenum enables users to create decentralized voice rooms, hold anonymous or public votes, and securely share media.
 
 ## Features
 
@@ -27,7 +29,7 @@
 - **Frontend:** Next.js (App Router), React.js, Tailwind CSS, Zustand, TypeScript
 - **Backend:** Go (Gorilla WebSocket), SQLite, WebRTC Signaling
 - **Storage:** IndexedDB (Dexie.js)
-- **Deployment:** Heroku (Frontend), Heroku (Backend)
+- **Deployment:** Vercel (Frontend planned), Heroku (Backend)
 
 ## Architecture Overview
 
@@ -39,6 +41,6 @@ Decentralized Plenum leverages a modular architecture to ensure clear separation
 
 ## Licensing and Contribution
 
-This repository is public for demonstration purposes and is still under active development. Contributions are welcome, and the project will soon be open-sourced under an appropriate permissive license (likely MIT or AGPLv3).
+This repository is publicly available for demonstration and collaboration. Contributions are welcome. The author intends to open-source the project under a permissive license (MIT or AGPLv3) once core features are finalized.
 
 © 2025 Nenad Bursać. All rights reserved.
