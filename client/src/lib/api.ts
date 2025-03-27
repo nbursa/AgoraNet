@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -7,23 +7,59 @@ export const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-export const login = async (username: string, password: string) => {
+interface AuthResponse {
+  token: string;
+  message?: string;
+}
+
+interface ErrorResponse {
+  error?: string;
+}
+
+export const login = async (
+  username: string,
+  password: string
+): Promise<AuthResponse> => {
   try {
-    const res = await api.post("/auth/login", { username, password });
+    const res = await api.post<AuthResponse>("/auth/login", {
+      username,
+      password,
+    });
+    if (res.data.token) {
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("auth-update", Date.now().toString());
+    }
     return res.data;
-  } catch {
-    throw new Error("Invalid credentials");
+  } catch (err) {
+    const error = err as AxiosError<ErrorResponse>;
+    if (error.response?.status === 401) {
+      throw new Error("invalid-credentials");
+    }
+    throw new Error("login-failed");
   }
 };
 
-export const register = async (formData: FormData) => {
+export const register = async (formData: FormData): Promise<AuthResponse> => {
   try {
-    const res = await api.post("/auth/register", formData, {
+    const res = await api.post<AuthResponse>("/auth/register", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
+
+    if (res.data.token) {
+      localStorage.setItem("token", res.data.token);
+    }
+
     return res.data;
-  } catch {
-    throw new Error("Registration failed");
+  } catch (err) {
+    const error = err as AxiosError<ErrorResponse>;
+    if (
+      error.response?.data?.error === "User exists, but password is incorrect"
+    ) {
+      throw new Error("user-exists-invalid-password");
+    } else if (error.response?.status === 401) {
+      throw new Error("user-exists-login-required");
+    }
+    throw new Error(error.response?.data?.error || "register-failed");
   }
 };
 
@@ -34,7 +70,8 @@ export function isAuthenticated(): boolean {
   return false;
 }
 
-export function logout() {
+export function logout(): void {
   localStorage.removeItem("token");
+  localStorage.setItem("auth-update", Date.now().toString());
   window.location.href = "/login";
 }

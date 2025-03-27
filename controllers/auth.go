@@ -25,9 +25,26 @@ func Register(c *fiber.Ctx) error {
 
 	var existingUser models.User
 	if result := config.DB.Where("username = ?", input.Username).First(&existingUser); result.RowsAffected > 0 {
-		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "Username already exists"})
+		// Fallback: check password for existing user
+		if err := bcrypt.CompareHashAndPassword([]byte(existingUser.Password), []byte(input.Password)); err != nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "User exists, but password is incorrect",
+			})
+		}
+
+		// Password correct – login and return token
+		token, err := services.GenerateJWT(existingUser.Username)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not generate token"})
+		}
+
+		return c.JSON(fiber.Map{
+			"message": "User already exists, logged in successfully",
+			"token":   token,
+		})
 	}
 
+	// Register new user
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Password encryption failed"})
@@ -38,7 +55,12 @@ func Register(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create user"})
 	}
 
-	return c.JSON(fiber.Map{"message": "User registered successfully"})
+	token, err := services.GenerateJWT(user.Username)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not generate token"})
+	}
+
+	return c.JSON(fiber.Map{"message": "User registered successfully", "token": token})
 }
 
 func Login(c *fiber.Ctx) error {
