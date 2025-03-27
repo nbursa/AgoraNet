@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
+import { Button } from "@/components/Button";
 
 export default function RoomsPage() {
   const router = useRouter();
@@ -48,16 +49,13 @@ export default function RoomsPage() {
   return (
     <div className="flex-1 flex items-center justify-center w-full px-4 py-6 overflow-y-auto">
       <div className="w-full max-w-3xl flex flex-col items-center text-center">
-        <h1 className="text-3xl font-bold">{t("title")}</h1>
+        <h1 className="text-4xl font-bold">{t("title")}</h1>
         <p className="mt-2 text-gray-400">{t("description")}</p>
 
         <div className="mt-6 w-full">
-          <button
-            onClick={createRoom}
-            className="w-full xs:w-auto bg-purple-600 text-white px-6 py-2 rounded-md hover:bg-purple-700"
-          >
+          <Button onClick={createRoom} className="w-full xs:w-auto">
             {t("create")}
-          </button>
+          </Button>
         </div>
 
         <h2 className="mt-8 text-xl font-semibold">{t("available")}</h2>
@@ -75,15 +73,16 @@ export default function RoomsPage() {
                 >
                   {room}
                 </Link>
-                <button
+                <Button
                   onClick={(event) => {
                     event.stopPropagation();
                     closeRoom(room);
                   }}
-                  className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600"
+                  className="bg-red-500/50 text-white px-3 py-1 rounded-md hover:bg-red-600"
+                  variant="ghost"
                 >
                   {t("delete")}
-                </button>
+                </Button>
               </div>
             ))
           ) : (

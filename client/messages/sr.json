@@ -101,8 +101,8 @@
       "description": "5 novih dokumenata je podeljeno ove nedelje."
     },
     "user": {
-      "sync": "🧠 Sačuvaj rezultate glasanja u bazi",
-      "syncing": "🔄 Sačuvanje u toku..."
+      "sync": "Sačuvaj rezultate glasanja u bazi",
+      "syncing": "Sačuvanje u toku..."
     },
     "guest": {
       "label": "Anonimni korisnik"
@@ -117,16 +117,16 @@
     "noRooms": "Nema aktivnih soba"
   },
   "room": {
-    "copy": "📋 Kopiraj link plenuma",
-    "copied": "✅ Kopirano!",
-    "you": "🟢 Ti",
-    "host": "👑 Domaćin",
-    "guest": "🔉 Gost",
+    "copy": "Kopiraj link plenuma",
+    "copied": "Kopirano!",
+    "you": "Ti",
+    "host": "Domaćin",
+    "guest": "Gost",
     "room": "Plenum",
-    "mic": "🎙️ Vaš mikrofon",
-    "share": "📤 Podeli dokument",
+    "mic": "Vaš mikrofon",
+    "share": "Podeli dokument",
     "choose": "Prikaži fajl",
-    "preview": "📎 Pregled deljenog sadržaja",
+    "preview": "Pregled deljenog sadržaja",
     "close": "Zatvori",
     "download": "Preuzmi",
     "leave": "Napusti plenum",
@@ -137,8 +137,8 @@
     "mic-off": "Uključi mikrofon",
     "show-history": "Prikaži istoriju glasanja",
     "hide-history": "Sakrij istoriju glasanja",
-    "show-participants": "👥 Prikaži učesnike",
-    "hide-participants": "🙈 Sakrij učesnike",
+    "show-participants": "Prikaži učesnike",
+    "hide-participants": "Sakrij učesnike",
     "vote": {
       "title": "Glasanje o temi",
       "start": "Kreiraj glasanje",
@@ -156,7 +156,7 @@
   "modal": {
     "title": "Rezultati glasanja za sobu:",
     "close": "Zatvori",
-    "empty": "🕳️ Nema zabeleženih glasova u ovoj sobi.",
+    "empty": "Nema zabeleženih glasova u ovoj sobi.",
     "labels": {
       "yes": "Da",
       "no": "Ne",

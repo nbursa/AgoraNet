@@ -103,8 +103,8 @@
       "description": "5 new documents shared this week."
     },
     "user": {
-      "sync": "🧠 Sync Vote Results to DB",
-      "syncing": "🔄 Syncing..."
+      "sync": "Sync Vote Results to DB",
+      "syncing": "Syncing..."
     },
     "guest": {
       "label": "Anonymous user"
@@ -119,16 +119,16 @@
     "noRooms": "No active rooms"
   },
   "room": {
-    "copy": "📋 Copy Room URL",
-    "copied": "✅ Copied!",
-    "you": "🟢 You",
-    "host": "👑 Host",
-    "guest": "🔉 Guest",
+    "copy": "Copy Room URL",
+    "copied": "Copied!",
+    "you": "You",
+    "host": "Host",
+    "guest": "Guest",
     "room": "Room",
-    "mic": "🎙️ Your Microphone",
-    "share": "📤 Share Document",
+    "mic": "Your Microphone",
+    "share": "Share Document",
     "choose": "Present File",
-    "preview": "📎 Shared Preview",
+    "preview": "Shared Preview",
     "close": "Close",
     "download": "Download",
     "leave": "Leave Room",
@@ -139,8 +139,8 @@
     "mic-off": "Unmute microphone",
     "show-history": "Show Voting History",
     "hide-history": "Hide Voting History",
-    "show-participants": "👥 Show Participants",
-    "hide-participants": "🙈 Hide Participants",
+    "show-participants": "Show Participants",
+    "hide-participants": "Hide Participants",
     "vote": {
       "title": "Voting Session on Topic",
       "start": "Create Voting",
@@ -156,9 +156,9 @@
     }
   },
   "modal": {
-    "title": "📊 Vote Results for Room:",
+    "title": "Vote Results for Room:",
     "close": "Close",
-    "empty": "🕳️ No votes recorded in this room.",
+    "empty": "No votes recorded in this room.",
     "labels": {
       "yes": "Yes",
       "no": "No",

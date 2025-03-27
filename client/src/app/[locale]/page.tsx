@@ -32,15 +32,24 @@ export default function HomePage() {
 
         {isAuthenticated ? (
           <div className="w-full mt-8 gap-4 flex flex-col sm:flex-row items-center justify-center">
-            <Button onClick={() => goTo("/rooms")}>{t("viewRooms")}</Button>
-            <Button onClick={() => goTo("/rooms/new")} variant="outline">
+            <Button onClick={() => goTo("/rooms")} className="w-full sm:w-auto">
+              {t("viewRooms")}
+            </Button>
+            <Button
+              onClick={() => goTo("/rooms/new")}
+              className="w-full sm:w-auto"
+              variant="outline"
+            >
               {t("createRoom")}
             </Button>
           </div>
         ) : (
           <div className="mt-8">
             <p className="text-gray-600 text-sm mb-2">{t("loginRequired")}</p>
-            <Button onClick={() => goTo("/login")} variant="outline">
+            <Button
+              onClick={() => goTo("/login")}
+              className="w-full sm:w-auto bg-green-600 text-white px-6 py-3 rounded-md text-lg"
+            >
               {t("loginBtn")}
             </Button>
           </div>

@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { syncVoteHistoryToDB } from "@/hooks/useVoteSync";
 import VoteChartModal from "@/components/VoteChartModal";
+import { Button } from "@/components/Button";
 
 type VoteHistoryItem = {
   question: string;
@@ -86,13 +87,14 @@ export default function DashboardPage() {
               )}
               <h1 className="text-2xl font-bold">👤 {user.username}</h1>
             </div>
-            <button
+            <Button
               onClick={handleSync}
               disabled={syncing}
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded text-white disabled:opacity-50"
+              className=" bg-green-600/50 hover:bg-green-700 disabled:opacity-50"
+              variant="ghost"
             >
               {syncing ? t("user.syncing") : t("user.sync")}
-            </button>
+            </Button>
           </div>
         ) : guestName ? (
           <div className="text-center">
@@ -128,10 +130,10 @@ export default function DashboardPage() {
                   className="bg-gray-800 p-4 rounded-lg shadow-md cursor-pointer hover:ring-2 ring-blue-600 transition-all relative"
                 >
                   <h3 className="text-lg font-bold mb-1">
-                    🏠 {t("room")}: {room.roomId}
+                    {t("room")}: {room.roomId}
                   </h3>
                   <p className="text-sm text-gray-300">
-                    🗳️ {room.votes.length} {t("votes.recorded")}
+                    {room.votes.length} {t("votes.recorded")}
                   </p>
                   <span className="absolute bottom-2 right-3 text-xs text-gray-400">
                     ℹ️ {t("rooms.viewDetails")}

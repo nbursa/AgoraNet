@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
+import { Button } from "@/components/Button";
 
 export default function AboutPage() {
   const t = useTranslations("about");
@@ -30,20 +31,18 @@ export default function AboutPage() {
         </div>
 
         <div className="mb-6 w-full text-left">
-          <h2 className="text-xl font-semibold">💡 {t("howItWorks.title")}</h2>
+          <h2 className="text-xl font-semibold">{t("howItWorks.title")}</h2>
           <p className="mt-2 text-gray-400">{t("howItWorks.text")}</p>
         </div>
 
         <div className="mb-6 w-full text-left">
-          <h2 className="text-xl font-semibold">🌍 {t("getInvolved.title")}</h2>
+          <h2 className="text-xl font-semibold">{t("getInvolved.title")}</h2>
           <p className="mt-2 text-gray-400">{t("getInvolved.text")}</p>
         </div>
 
         <div className="mt-6 w-full">
           <Link href={`/${locale}`}>
-            <button className="w-full xs:w-auto bg-purple-600 text-white px-6 py-2 rounded-md hover:bg-purple-700">
-              {t("backToHome")}
-            </button>
+            <Button>{t("backToHome")}</Button>
           </Link>
         </div>
       </div>
