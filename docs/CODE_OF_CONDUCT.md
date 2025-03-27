@@ -2,7 +2,7 @@
 
 All contributors are expected to adhere to respectful, inclusive, and constructive behavior.
 
-## Our Standards
+## Standards
 
 - Be kind and considerate
 - Avoid personal attacks
