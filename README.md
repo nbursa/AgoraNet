@@ -31,7 +31,7 @@
 - **Frontend:** Next.js (App Router), React.js, Tailwind CSS, Zustand, TypeScript
 - **Backend:** Go (Gorilla WebSocket), SQLite, WebRTC Signaling
 - **Storage:** IndexedDB (Dexie.js)
-- **Deployment:** Vercel (Frontend planned), Heroku (Backend)
+- **Deployment:** Heroku (Frontend), Heroku (Backend)
 
 ## Architecture Overview
 
@@ -43,6 +43,10 @@ Decentralized Plenum leverages a modular architecture to ensure clear separation
 
 ## Licensing and Contribution
 
-This repository is publicly available for demonstration and collaboration. Contributions are welcome. The author intends to open-source the project under a permissive license (MIT or AGPLv3) once core features are finalized.
+This repository is publicly available for demonstration, evaluation, and educational purposes. Redistribution, modification, or reuse in any form is prohibited without explicit written permission from the author.
+
+The author intends to open-source the project under a permissive license (MIT or AGPLv3) after achieving foundational development milestones. At that time, contributors will be invited to participate under clearly defined terms.
+
+For inquiries regarding permissions or collaboration, please contact the author directly.
 
 © 2025 Nenad Bursać. All rights reserved.
