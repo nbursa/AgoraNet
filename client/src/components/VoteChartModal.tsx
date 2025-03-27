@@ -44,7 +44,7 @@ export default function VoteChartModal({ roomId, votes, onClose }: Props) {
             onClick={onClose}
             className="text-gray-400 hover:text-white text-sm"
           >
-            ✖ {t("close")}
+            {t("close")}
           </button>
         </div>
 

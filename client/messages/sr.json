@@ -135,8 +135,8 @@
     "loading": "Učitavanje",
     "mic-on": "Isključi mikrofon",
     "mic-off": "Uključi mikrofon",
-    "show-history": "Prikaži istoriju glasanja",
-    "hide-history": "Sakrij istoriju glasanja",
+    "show-history": "Prikaži glasanja",
+    "hide-history": "Sakrij glasanja",
     "show-participants": "Prikaži učesnike",
     "hide-participants": "Sakrij učesnike",
     "vote": {

@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Image from "next/image";
 import { useWebRTC, VoteResult } from "@/hooks/useWebRTC";
 import { useTranslations } from "next-intl";
+import { Button } from "@/components/Button";
 
 type LegacyVoteResult = VoteResult & {
   yesCount?: number;
@@ -218,21 +219,23 @@ export default function RoomPage() {
       >
         <div className="p-2 border-b border-gray-700 flex gap-2 flex-row sm:items-center sm:justify-start">
           <div className="flex w-full sm:w-full gap-2">
-            <button
+            <Button
               onClick={handleCopyRoomUrl}
-              className="w-1/2 flex-1 bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm sm:w-full"
+              className="w-1/2 flex-1 text-sm sm:w-full"
+              variant="outline"
             >
               {copied ? t("copied") : t("copy")}
-            </button>
+            </Button>
 
-            <button
+            <Button
               onClick={toggleMobileSidebar}
-              className="w-1/2 flex-1 sm:hidden bg-gray-800 hover:bg-gray-700 text-white px-3 py-2 rounded text-sm"
+              className="w-1/2 flex-1 sm:hidden"
+              variant="outline"
             >
               {isMobileSidebarOpen
                 ? t("hide-participants")
                 : t("show-participants")}
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -282,43 +285,47 @@ export default function RoomPage() {
               localUserId === hostId ? "sm:grid-cols-4" : "sm:grid-cols-3"
             }`}
           >
-            <button
+            <Button
               onClick={toggleMic}
               className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded text-sm"
+              variant="ghost"
             >
-              {isMicMuted ? `🔇 ${t("mic-off")}` : `🎤 ${t("mic-on")}`}
-            </button>
+              {isMicMuted ? `${t("mic-off")}` : `${t("mic-on")}`}
+            </Button>
 
-            <button
+            <Button
               onClick={triggerFileSelect}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
+              variant="ghost"
             >
-              📁 {t("choose")}
-            </button>
+              {t("choose")}
+            </Button>
 
             {localUserId === hostId && (
-              <button
+              <Button
                 onClick={() => setShowVoteHistory((prev) => !prev)}
                 className={`bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm ${
                   normalizedVoteHistory.length === 0
                     ? "opacity-50 cursor-not-allowed"
                     : ""
                 }`}
+                variant="ghost"
                 disabled={normalizedVoteHistory.length === 0}
               >
                 {showVoteHistory ? t("hide-history") : t("show-history")}
-              </button>
+              </Button>
             )}
 
-            <button
+            <Button
               onClick={() => {
                 leaveRoom();
                 window.location.href = "/rooms";
               }}
               className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm"
+              variant="ghost"
             >
               {t("leave")}
-            </button>
+            </Button>
           </div>
 
           {localUserId === hostId && !activeVote && (
@@ -330,12 +337,13 @@ export default function RoomPage() {
                 onChange={(e) => setVoteQuestion(e.target.value)}
                 className="flex-1 px-3 py-2 rounded bg-gray-800 text-white placeholder-gray-400 text-sm"
               />
-              <button
+              <Button
                 onClick={handleCreateVote}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm whitespace-nowrap"
+                className="bg-green-600 hover:bg-green-700 text-white px-4 h-9 rounded text-sm whitespace-nowrap"
+                variant="ghost"
               >
                 {t("vote.start")}
-              </button>
+              </Button>
             </div>
           )}
 
