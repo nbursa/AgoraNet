@@ -49,4 +49,10 @@ The author intends to open-source the project under a permissive license (MIT or
 
 For inquiries regarding permissions or collaboration, please contact the author directly.
 
+## Contact
+
+For inquiries, collaborations, or research partnerships, feel free to reach out:
+
+🌍 Website: nenadbursac.com/contact📂 GitHub: github.com/nbursa/SynthaMind
+
 © 2025 Nenad Bursać. All rights reserved.
