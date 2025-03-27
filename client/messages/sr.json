@@ -5,7 +5,8 @@
     "dashboard": "Panel",
     "about": "Info",
     "login": "Prijava",
-    "logout": "Odjava"
+    "logout": "Odjava",
+    "copyright": "Nenad Bursać. Sva prava zadržana."
   },
   "navigation": {
     "home": "Početna",

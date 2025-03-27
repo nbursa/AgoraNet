@@ -5,7 +5,8 @@
     "dashboard": "Dashboard",
     "about": "About",
     "login": "Login",
-    "logout": "Logout"
+    "logout": "Logout",
+    "copyright": "Nenad Bursać. All rights reserved."
   },
   "navigation": {
     "home": "Home",
