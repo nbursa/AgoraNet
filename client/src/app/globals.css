@@ -1,16 +1,32 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: 255 100% 100%;
+  --foreground: 0 0% 10%;
+  --primary: 222.2 89% 90%;
+  --primary-foreground: 222.2 89% 10%;
+  --secondary: 0 0% 100%;
+  --secondary-foreground: 0 0% 20%;
+  --secondary-hover: 0 0% 100% / 0.08;
+  --border: 220 13% 91%;
+  --input: 220 13% 91%;
+  --ring: 222.2 89% 55%;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: 222.2 47.4% 11.2%;
+    --foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 0 0% 100%;
+    --secondary-foreground: 0 0% 95%;
+    --secondary-hover: 0 0% 100% / 0.08;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 210 40% 98%;
   }
 }
 
@@ -38,8 +54,8 @@ body {
 
 body {
   position: relative;
-  background: var(--background);
-  color: var(--foreground);
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
   font-family: var(--font-sans), sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -59,4 +75,9 @@ button:enabled:hover {
 
 button:disabled {
   cursor: not-allowed;
+}
+
+button:focus-visible {
+  outline: none;
+  box-shadow: none;
 }

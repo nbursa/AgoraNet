@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { useEffect, useState } from "react";
+import { Button } from "@/components/Button";
 
 export default function HomePage() {
   const router = useRouter();
@@ -20,35 +21,28 @@ export default function HomePage() {
   };
 
   return (
-    <div className="flex-1 flex items-center justify-center w-full px-4 py-6">
-      <div className="flex flex-col items-center w-full max-w-2xl text-center">
-        <h1 className="text-3xl font-bold">{t("title")}</h1>
-        <p className="mt-2 text-gray-400">{t("description")}</p>
+    <div className="flex-1 flex items-center justify-center w-full px-4 py-8">
+      <div className="flex flex-col items-center w-full max-w-3xl text-center">
+        <h1 className="text-4xl sm:text-5xl font-bold mb-4">{t("title")}</h1>
+        <p className="text-gray-400 text-lg max-w-2xl">{t("description")}</p>
+
+        <p className="mt-6 text-gray-500 text-sm max-w-xl leading-relaxed">
+          {t("longDescription")}
+        </p>
 
         {isAuthenticated ? (
-          <div className="w-full mt-6 gap-4 flex flex-col xs:flex-row items-center justify-center">
-            <button
-              onClick={() => goTo("/rooms")}
-              className="w-full xs:w-auto bg-blue-600 text-white px-6 py-2 rounded-md"
-            >
-              {t("viewRooms")}
-            </button>
-            <button
-              onClick={() => goTo("/rooms/new")}
-              className="w-full xs:w-auto bg-purple-600 text-white px-6 py-2 rounded-md"
-            >
+          <div className="w-full mt-8 gap-4 flex flex-col sm:flex-row items-center justify-center">
+            <Button onClick={() => goTo("/rooms")}>{t("viewRooms")}</Button>
+            <Button onClick={() => goTo("/rooms/new")} variant="outline">
               {t("createRoom")}
-            </button>
+            </Button>
           </div>
         ) : (
-          <div className="mt-6">
-            <p className="text-gray-600 text-sm">🔒 {t("loginRequired")}</p>
-            <button
-              onClick={() => goTo("/login")}
-              className="w-full xs:w-auto mt-4 bg-green-600 text-white px-6 py-2 rounded-md"
-            >
+          <div className="mt-8">
+            <p className="text-gray-600 text-sm mb-2">{t("loginRequired")}</p>
+            <Button onClick={() => goTo("/login")} variant="outline">
               {t("loginBtn")}
-            </button>
+            </Button>
           </div>
         )}
       </div>

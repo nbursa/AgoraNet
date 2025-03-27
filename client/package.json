@@ -10,7 +10,10 @@
   },
   "dependencies": {
     "@headlessui/react": "^2.2.0",
+    "@radix-ui/react-slot": "^1.1.2",
     "axios": "^1.8.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "lucide-react": "^0.483.0",
     "next": "15.2.2",
     "next-auth": "^4.24.11",
@@ -18,7 +21,8 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "recharts": "^2.15.1",
-    "socket.io-client": "^4.8.1"
+    "socket.io-client": "^4.8.1",
+    "tailwind-merge": "^3.0.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

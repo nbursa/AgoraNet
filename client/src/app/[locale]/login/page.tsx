@@ -21,10 +21,14 @@ export default function LoginPage() {
       if (!response.token) throw new Error("No token");
       localStorage.setItem("token", response.token);
       setError("");
-      router.push(`/${locale}/rooms`);
+      router.push(`/${locale}`);
     } catch (err) {
-      console.error("Login failed:", err);
-      setError(t("error"));
+      const error = err as Error;
+      if (error.message === "invalid-credentials") {
+        setError(t("invalidCredentials"));
+      } else {
+        setError(t("error"));
+      }
     }
   };
 

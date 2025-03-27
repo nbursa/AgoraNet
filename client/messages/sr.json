@@ -19,6 +19,7 @@
   "home": {
     "title": "Decentralizovani Plenum",
     "description": "Sigurni, decentralizovani sastanci, diskusije i glasanja",
+    "longDescription": "Decentralizovani Plenum je prostor otporan na cenzuru za glasovne javne diskusije, kolektivno odlučivanje i anonimno učešće — osmišljen da osnaži zajednice pomoću bezbednih, direktnih alata za komunikaciju u realnom vremenu.",
     "viewRooms": "Pogledaj Aktivne Plenume",
     "createRoom": "Kreiraj Novi Plenum",
     "loginRequired": "Morate biti prijavljeni da biste pristupili plenumima.",
@@ -61,7 +62,8 @@
     "loginBtn": "Prijavi se",
     "error": "Neispravni podaci",
     "noAccount": "Nemate nalog?",
-    "registerHere": "Registrujte se ovde"
+    "registerHere": "Registrujte se ovde",
+    "invalidCredentials": "Pogrešno korisničko ime ili lozinka"
   },
   "register": {
     "title": "Kreiraj Nalog",

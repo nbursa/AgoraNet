@@ -42,9 +42,16 @@ export default function RegisterPage() {
     try {
       await register(formData);
       setError("");
-      router.push(`/${locale}/login`);
-    } catch {
-      setError(t("error"));
+      router.push(`/${locale}`);
+    } catch (err) {
+      const e = err as Error;
+      if (e.message === "user-exists-invalid-password") {
+        setError(t("userExistsWrongPassword"));
+      } else if (e.message === "user-exists-login-required") {
+        setError(t("userExists"));
+      } else {
+        setError(t("error"));
+      }
     }
   };
 

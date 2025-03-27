@@ -19,6 +19,7 @@
   "home": {
     "title": "Decentralized Meeting",
     "description": "Secure, decentralized meetings, discussions & voting",
+    "longDescription": "Decentralized Plenum is a censorship-resistant space for voice-based public discussions, collective decisions, and anonymous participation — designed to empower communities with real-time, secure peer-to-peer tools.",
     "viewRooms": "View Active Rooms",
     "createRoom": "Create New Room",
     "loginRequired": "You must be logged in to access rooms.",
@@ -61,7 +62,8 @@
     "loginBtn": "Login",
     "error": "Invalid credentials",
     "noAccount": "Don't have an account?",
-    "registerHere": "Register here"
+    "registerHere": "Register here",
+    "invalidCredentials": "Invalid username or password"
   },
   "register": {
     "title": "Create Your Account",
@@ -76,7 +78,9 @@
     "haveAccount": "Already have an account?",
     "loginHere": "Login here",
     "mismatch": "Passwords do not match",
-    "error": "Registration failed. Try again."
+    "error": "Registration failed. Try again.",
+    "userExists": "Username already exists. Please log in.",
+    "userExistsWrongPassword": "Username already exists, but the password is incorrect. Please log in."
   },
   "dashboard": {
     "title": "Dashboard",
