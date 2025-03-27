@@ -19,6 +19,7 @@ type Client struct {
 	ID     string
 	Conn   *ws.Conn
 	RoomID string
+	mu     sync.Mutex
 }
 
 type PastVote struct {
@@ -202,7 +203,6 @@ func HandleWebSocket(c *ws.Conn) {
 		clientID = uuid.New().String()
 	}
 
-	// client := &Client{ID: clientID, Conn: wrapConn(c)}
 	client := &Client{ID: clientID, Conn: c}
 	clients[clientID] = client
 	log.Println("🔌 Connected:", clientID)
@@ -252,7 +252,6 @@ func removeClient(client *Client) {
 	roomLock.Lock()
 	defer roomLock.Unlock()
 
-	// Log that you're about to close the connection
 	log.Printf("Closing connection for client %s", client.ID)
 
 	// Close the WebSocket connection
@@ -271,10 +270,12 @@ func removeClient(client *Client) {
 
 		// Notify others that this client left
 		for _, peer := range room.Clients {
-			peer.Conn.WriteJSON(map[string]interface{}{
-				"type":   "leave",
-				"userId": client.ID,
+			peer.mu.Lock()
+			_ = peer.Conn.WriteJSON(map[string]interface{}{
+			"type":   "leave",
+			"userId": client.ID,
 			})
+			peer.mu.Unlock()
 		}
 
 		if len(room.Clients) == 0 {
@@ -297,7 +298,12 @@ func forwardMessage(targetID string, msg map[string]interface{}) {
 func broadcastMessage(roomID string, msg map[string]interface{}) {
 	if room, ok := rooms[roomID]; ok {
 		for _, client := range room.Clients {
-			client.Conn.WriteJSON(msg)
+			client.mu.Lock()
+			err := client.Conn.WriteJSON(msg)
+			client.mu.Unlock()
+			if err != nil {
+				log.Printf("❌ Failed to send message to %s: %v", client.ID, err)
+			}
 		}
 	}
 }
@@ -330,7 +336,9 @@ func broadcastRoomState(roomID string) {
 			state["voteHistory"] = room.PastVotes
 		}
 
-		client.Conn.WriteJSON(state)
+		client.mu.Lock()
+		_ = client.Conn.WriteJSON(state)
+		client.mu.Unlock()
 	}
 }
 
