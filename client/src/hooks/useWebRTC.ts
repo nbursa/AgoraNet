@@ -4,7 +4,8 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
 const SIGNALING_SERVER =
-  process.env.NEXT_PUBLIC_SIGNALING_SERVER || "wss://localhost:8081/ws";
+  process.env.NEXT_PUBLIC_SIGNALING_SERVER ||
+  (typeof window !== "undefined" ? "ws://localhost:8081/ws" : "");
 
 type SharedMediaType = "image" | "pdf";
 
@@ -153,6 +154,7 @@ export function useWebRTC(roomId: string) {
 
       peer.ontrack = (event) => {
         const remoteStream = event.streams[0];
+
         if (remoteStream) {
           setRemoteStreams((prev) => {
             const exists = prev.some((s) => s.id === userId);
