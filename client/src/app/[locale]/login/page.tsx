@@ -5,6 +5,7 @@ import { login } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
+import { Button } from "@/components/Button";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -65,18 +66,10 @@ export default function LoginPage() {
           {error && <p className="text-red-500 mt-2">{error}</p>}
 
           <div className="flex justify-between mt-4">
-            <button
-              onClick={() => router.push(`/${locale}`)}
-              className="bg-gray-500 text-white px-4 py-2 rounded-md"
-            >
+            <Button onClick={() => router.push(`/${locale}`)} variant="outline">
               {t("cancel")}
-            </button>
-            <button
-              onClick={handleLogin}
-              className="bg-blue-500 text-white px-4 py-2 rounded-md"
-            >
-              {t("loginBtn")}
-            </button>
+            </Button>
+            <Button onClick={handleLogin}>{t("loginBtn")}</Button>
           </div>
 
           <p className="text-center mt-4">
