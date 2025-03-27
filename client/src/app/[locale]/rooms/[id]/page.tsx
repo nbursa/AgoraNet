@@ -119,6 +119,7 @@ export default function RoomPage() {
         audioEl = document.createElement("audio");
         audioEl.autoplay = true;
         audioEl.setAttribute("playsinline", "true");
+        audioEl.muted = false;
         audioEl.className = "hidden";
         document.body.appendChild(audioEl);
         remoteAudioRefs.current[id] = audioEl;
@@ -126,7 +127,14 @@ export default function RoomPage() {
       if (stream && audioEl.srcObject !== stream) {
         audioEl.srcObject = stream;
         audioEl.onloadedmetadata = () => {
-          audioEl.play().catch(console.error);
+          audioEl
+            .play()
+            .then(() => {
+              console.log("🔊 Playing remote stream for", id);
+            })
+            .catch((err) => {
+              console.warn("⚠️ Play failed for", id, err);
+            });
         };
         setupSpeakingDetection(id, stream, false);
       }
