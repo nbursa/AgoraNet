@@ -51,8 +51,6 @@ For inquiries regarding permissions or collaboration, please contact the author 
 
 ## Contact
 
-For inquiries, collaborations, or research partnerships, feel free to reach out:
-
-🌍 Website: nenadbursac.com/contact📂 GitHub: github.com/nbursa/SynthaMind
+For inquiries, collaborations, or research partnerships, feel free to reach out: [https://nenadbursac.com/contact](https://nenadbursac.com/contact)
 
 © 2025 Nenad Bursać. All rights reserved.
