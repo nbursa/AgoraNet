@@ -108,7 +108,10 @@ export default function RoomPage() {
     [sendSpeakingStatus]
   );
 
-  // Runs only once the stream is available on the client side
+  useEffect(() => {
+    document.title = `${t("title")} - ${id}`;
+  }, [id, t]);
+
   useEffect(() => {
     if (typeof window !== "undefined" && stream && localUserId) {
       const audioTrack = stream.getAudioTracks()[0];

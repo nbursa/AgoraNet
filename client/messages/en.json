@@ -17,7 +17,7 @@
     "logout": "Logout"
   },
   "home": {
-    "title": "Decentralized Meeting",
+    "title": "Decentralized Meetings",
     "description": "Secure, decentralized meetings, discussions & voting",
     "longDescription": "Decentralized Plenum is a censorship-resistant space for voice-based public discussions, collective decisions, and anonymous participation — designed to empower communities with real-time, secure peer-to-peer tools.",
     "viewRooms": "View Active Rooms",
@@ -26,6 +26,7 @@
     "loginBtn": "Login / Register"
   },
   "about": {
+    "pageTitle": "About Page",
     "title": "What is Decentralized Plenum?",
     "description": {
       "part1": "Decentralized Plenum is a secure online space for",
@@ -119,6 +120,7 @@
     "noRooms": "No active rooms"
   },
   "room": {
+    "title": "Room",
     "copy": "Copy Room URL",
     "copied": "Copied!",
     "you": "You",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { login } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -15,6 +15,10 @@ export default function LoginPage() {
   const router = useRouter();
   const t = useTranslations("login");
   const locale = useLocale();
+
+  useEffect(() => {
+    document.title = `${t("title")}`;
+  }, [t]);
 
   const handleLogin = async () => {
     try {

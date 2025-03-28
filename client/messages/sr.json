@@ -1,6 +1,6 @@
 {
   "common": {
-    "title": "Decentralizovani Plenum",
+    "title": "Decentralizovani Plenumi",
     "rooms": "Plenumi",
     "dashboard": "Panel",
     "about": "Info",
@@ -17,7 +17,7 @@
     "logout": "Odjavi se"
   },
   "home": {
-    "title": "Decentralizovani Plenum",
+    "title": "Decentralizovani Plenumi",
     "description": "Sigurni, decentralizovani sastanci, diskusije i glasanja",
     "longDescription": "Decentralizovani Plenum je prostor otporan na cenzuru za glasovne javne diskusije, kolektivno odlučivanje i anonimno učešće — osmišljen da osnaži zajednice pomoću bezbednih, direktnih alata za komunikaciju u realnom vremenu.",
     "viewRooms": "Pogledaj Aktivne Plenume",
@@ -26,6 +26,7 @@
     "loginBtn": "Prijava / Registracija"
   },
   "about": {
+    "pageTitle": "Info Strana",
     "title": "Šta je Decentralizovani Plenum?",
     "description": {
       "part1": "Decentralizovani Plenum je bezbedno online mesto za",
@@ -117,6 +118,7 @@
     "noRooms": "Nema aktivnih soba"
   },
   "room": {
+    "title": "Plenum",
     "copy": "Kopiraj link plenuma",
     "copied": "Kopirano!",
     "you": "Ti",

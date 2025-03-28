@@ -16,6 +16,10 @@ export default function HomePage() {
     setIsAuthenticated(!!token);
   }, []);
 
+  useEffect(() => {
+    document.title = `${t("title")}`;
+  }, [t]);
+
   const goTo = (path: string) => {
     router.push(`/${locale}${path}`);
   };

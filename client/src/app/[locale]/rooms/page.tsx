@@ -13,6 +13,10 @@ export default function RoomsPage() {
   const [rooms, setRooms] = useState<string[]>([]);
 
   useEffect(() => {
+    document.title = `${t("title")}`;
+  }, [t]);
+
+  useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
       router.push(`/${locale}/login`);

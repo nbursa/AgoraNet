@@ -3,10 +3,15 @@
 import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
 import { Button } from "@/components/Button";
+import { useEffect } from "react";
 
 export default function AboutPage() {
   const t = useTranslations("about");
   const locale = useLocale();
+
+  useEffect(() => {
+    document.title = `${t("pageTitle")}`;
+  }, [t]);
 
   return (
     <div className="w-full min-h-full flex items-center justify-center px-4 py-12">

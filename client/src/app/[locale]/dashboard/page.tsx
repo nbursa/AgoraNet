@@ -34,6 +34,10 @@ export default function DashboardPage() {
   const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
   useEffect(() => {
+    document.title = `${t("title")}`;
+  }, [t]);
+
+  useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
       fetch(`${API}/auth/me`, {

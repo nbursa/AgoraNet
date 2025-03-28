@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -20,6 +20,10 @@ export default function RegisterPage() {
   const router = useRouter();
   const locale = useLocale();
   const t = useTranslations("register");
+
+  useEffect(() => {
+    document.title = `${t("title")}`;
+  }, [t]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
