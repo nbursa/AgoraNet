@@ -244,7 +244,7 @@ export function useWebRTC(roomId: string) {
         socketRef.current = socket;
 
         socket.onopen = () => {
-          console.log("✅ WebSocket connected");
+          console.info("✅ WebSocket connected");
           socket.send(JSON.stringify({ type: "init", userId: storedId }));
         };
 
@@ -349,7 +349,7 @@ export function useWebRTC(roomId: string) {
         };
 
         socket.onclose = () => {
-          console.warn("🛑 WebSocket closed. Reconnecting...");
+          console.info("🛑 WebSocket closed. Reconnecting...");
           setTimeout(connect, 1000);
         };
 
