@@ -108,8 +108,9 @@ export default function RoomPage() {
     [sendSpeakingStatus]
   );
 
+  // Runs only once the stream is available on the client side
   useEffect(() => {
-    if (stream && localUserId) {
+    if (typeof window !== "undefined" && stream && localUserId) {
       const audioTrack = stream.getAudioTracks()[0];
       if (audioTrack) {
         audioTrack.enabled = false;
@@ -120,6 +121,7 @@ export default function RoomPage() {
   }, [stream, localUserId, setupSpeakingDetection]);
 
   useEffect(() => {
+    // Create remote audio elements when streams are available
     remoteStreams.forEach(({ id, stream }) => {
       let audioEl = remoteAudioRefs.current[id];
       if (!audioEl) {
@@ -144,7 +146,6 @@ export default function RoomPage() {
               })
               .catch((err) => {
                 console.warn("⚠️ Autoplay blocked for", id, err);
-                // Retry after user interaction (mobile/desktop)
                 const clickHandler = () => {
                   audioEl.play().catch(console.error);
                   window.removeEventListener("click", clickHandler);
