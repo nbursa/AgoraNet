@@ -49,6 +49,7 @@ export default function HomePage() {
             <Button
               onClick={() => goTo("/login")}
               className="w-full sm:w-auto bg-green-600 text-white px-6 py-3 rounded-md text-lg"
+              variant="ghost"
             >
               {t("loginBtn")}
             </Button>
