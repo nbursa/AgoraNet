@@ -66,6 +66,11 @@ export default function RoomPage() {
       if (!audioContextRef.current)
         audioContextRef.current = new AudioContext();
       const audioContext = audioContextRef.current;
+
+      if (audioContext.state === "suspended") {
+        audioContext.resume().catch(console.error);
+      }
+
       const source = audioContext.createMediaStreamSource(mediaStream);
       const analyser = audioContext.createAnalyser();
       analyser.fftSize = 512;
@@ -106,8 +111,10 @@ export default function RoomPage() {
   useEffect(() => {
     if (stream && localUserId) {
       const audioTrack = stream.getAudioTracks()[0];
-      if (audioTrack) audioTrack.enabled = false;
-      setIsMicMuted(true);
+      if (audioTrack) {
+        audioTrack.enabled = false;
+        setIsMicMuted(true);
+      }
       setupSpeakingDetection(localUserId, stream, true);
     }
   }, [stream, localUserId, setupSpeakingDetection]);
@@ -124,22 +131,48 @@ export default function RoomPage() {
         document.body.appendChild(audioEl);
         remoteAudioRefs.current[id] = audioEl;
       }
+
       if (stream && audioEl.srcObject !== stream) {
         audioEl.srcObject = stream;
+
         audioEl.onloadedmetadata = () => {
-          audioEl
-            .play()
-            .then(() => {
-              console.log("🔊 Playing remote stream for", id);
-            })
-            .catch((err) => {
-              console.warn("⚠️ Play failed for", id, err);
-            });
+          const playAttempt = audioEl.play();
+          if (playAttempt !== undefined) {
+            playAttempt
+              .then(() => {
+                console.log("🔊 Playing remote stream for", id);
+              })
+              .catch((err) => {
+                console.warn("⚠️ Autoplay blocked for", id, err);
+                // Retry after user interaction (mobile/desktop)
+                const clickHandler = () => {
+                  audioEl.play().catch(console.error);
+                  window.removeEventListener("click", clickHandler);
+                };
+                window.addEventListener("click", clickHandler);
+              });
+          }
         };
+
         setupSpeakingDetection(id, stream, false);
       }
     });
   }, [remoteStreams, setupSpeakingDetection]);
+
+  useEffect(() => {
+    const unlockAudio = () => {
+      Object.values(remoteAudioRefs.current).forEach((audioEl) => {
+        audioEl?.play().catch(console.error);
+      });
+      window.removeEventListener("click", unlockAudio);
+    };
+    window.addEventListener("click", unlockAudio);
+    return () => window.removeEventListener("click", unlockAudio);
+  }, []);
+
+  useEffect(() => {
+    console.log("🔁 Remote streams updated:", remoteStreams);
+  }, [remoteStreams]);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -194,10 +227,11 @@ export default function RoomPage() {
 
   const toggleMic = () => {
     const audioTrack = stream?.getAudioTracks()[0];
-    if (audioTrack) {
+    if (audioTrack && localUserId && stream) {
       const enabled = !audioTrack.enabled;
       audioTrack.enabled = enabled;
       setIsMicMuted(!enabled);
+      setupSpeakingDetection(localUserId, stream, true);
     }
   };
 
@@ -298,7 +332,7 @@ export default function RoomPage() {
               className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded text-sm"
               variant="ghost"
             >
-              {isMicMuted ? `${t("mic-off")}` : `${t("mic-on")}`}
+              {isMicMuted ? `${t("mic-on")}` : `${t("mic-off")}`}
             </Button>
 
             <Button
