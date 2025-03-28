@@ -18,7 +18,7 @@ export type VoteResult = {
 
 type SignalMessage =
   | { type: "init"; userId: string }
-  | { type: "join"; roomId: string }
+  | { type: "join"; roomId: string; isCreator: boolean }
   | {
       type: "room-state";
       users: string[];
@@ -75,7 +75,15 @@ export function useWebRTC(roomId: string) {
   const isJoiningRef = useRef(false);
   const initializedRef = useRef(false);
 
+  const [isHost, setIsHost] = useState(false);
+
   const LOCAL_STORAGE_KEY = `voteHistory-${roomId}`;
+
+  useEffect(() => {
+    const activeRooms = localStorage.getItem("activeRooms");
+    const isInRoom = activeRooms && JSON.parse(activeRooms).includes(roomId);
+    setIsHost(localUserId === hostId && isInRoom);
+  }, [localUserId, hostId, roomId]);
 
   const send = useCallback((msg: SignalMessage) => {
     const json = JSON.stringify(msg);
@@ -103,22 +111,22 @@ export function useWebRTC(roomId: string) {
 
   const createVote = useCallback(
     (question: string) => {
-      if (localUserId === hostId && !activeVote) {
+      if (isHost && !activeVote) {
         send({ type: "create-vote", question });
         setActiveVote(question);
         setCurrentVotes({});
       }
     },
-    [send, localUserId, hostId, activeVote]
+    [isHost, activeVote, send]
   );
 
   const endVote = useCallback(() => {
-    if (localUserId === hostId && activeVote) {
+    if (isHost && activeVote) {
       send({ type: "end-vote" });
       setActiveVote(null);
       setCurrentVotes({});
     }
-  }, [send, localUserId, hostId, activeVote]);
+  }, [isHost, activeVote, send]);
 
   const vote = useCallback(
     (value: "yes" | "no") => {
@@ -155,9 +163,6 @@ export function useWebRTC(roomId: string) {
       peer.ontrack = (event) => {
         const remoteStream = event.streams[0];
 
-        console.log("🎧 ontrack stream:", remoteStream);
-        console.log("🎧 audio tracks:", remoteStream.getAudioTracks());
-
         if (remoteStream) {
           setRemoteStreams((prev) => {
             const exists = prev.some((s) => s.id === userId);
@@ -169,7 +174,6 @@ export function useWebRTC(roomId: string) {
       };
 
       peer.oniceconnectionstatechange = () => {
-        console.log("ICE connection state:", peer.iceConnectionState);
         if (peer.iceConnectionState === "failed") {
           console.error("ICE connection failed.");
         }
@@ -240,6 +244,7 @@ export function useWebRTC(roomId: string) {
         socketRef.current = socket;
 
         socket.onopen = () => {
+          console.log("✅ WebSocket connected");
           socket.send(JSON.stringify({ type: "init", userId: storedId }));
         };
 
@@ -252,7 +257,10 @@ export function useWebRTC(roomId: string) {
               userIdRef.current = message.userId;
               setLocalUserId(message.userId);
               isJoiningRef.current = true;
-              send({ type: "join", roomId });
+              const activeRooms = localStorage.getItem("activeRooms");
+              const isCreator =
+                activeRooms && JSON.parse(activeRooms).includes(roomId);
+              send({ type: "join", roomId, isCreator });
               break;
 
             case "room-state":
@@ -340,8 +348,15 @@ export function useWebRTC(roomId: string) {
           }
         };
 
-        socket.onclose = () => console.warn("🛑 WebSocket closed.");
-        socket.onerror = (err) => console.error("🔥 WebSocket error:", err);
+        socket.onclose = () => {
+          console.warn("🛑 WebSocket closed. Reconnecting...");
+          setTimeout(connect, 1000);
+        };
+
+        socket.onerror = (err) => {
+          console.error("🔥 WebSocket error:", err);
+          socket.close();
+        };
       } catch (err) {
         console.error("❌ Failed to connect:", err);
       }

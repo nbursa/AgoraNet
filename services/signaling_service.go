@@ -89,8 +89,12 @@ func handleMessage(client *Client, msg map[string]interface{}) {
 	switch msg["type"] {
 	case "join":
 		if roomID, ok := msg["roomId"].(string); ok {
+			isCreator := false
+			if v, ok := msg["isCreator"].(bool); ok && v {
+				isCreator = true
+			}
 			client.RoomID = roomID
-			registerClient(roomID, client)
+			registerClient(roomID, client, isCreator)
 		}
 	case "offer", "answer", "ice-candidate":
 		if targetID, ok := msg["userId"].(string); ok {
@@ -224,30 +228,39 @@ func HandleWebSocket(c *ws.Conn) {
 	}
 }
 
-func registerClient(roomID string, client *Client) {
+func registerClient(roomID string, client *Client, isCreator bool) {
 	roomLock.Lock()
 	defer roomLock.Unlock()
 
 	room, exists := rooms[roomID]
+
 	if !exists {
-		room = &Room{
-			Clients:      make(map[string]*Client),
-			HostID:       client.ID,
-			ActiveVote:   "",
-			CurrentVotes: make(map[string]string),
-			LastMedia:    nil,
-			PastVotes:    []PastVote{},
+		if isCreator {
+			room = &Room{
+				Clients:      make(map[string]*Client),
+				HostID:       client.ID,
+				ActiveVote:   "",
+				CurrentVotes: make(map[string]string),
+				LastMedia:    nil,
+				PastVotes:    []PastVote{},
+			}
+			rooms[roomID] = room
+			log.Printf("👑 Created room %s (host: %s)", roomID, client.ID)
+		} else {
+			log.Printf("⛔ Rejected guest trying to join non-existent room %s", roomID)
+			_ = client.Conn.WriteJSON(map[string]interface{}{
+				"type":  "error",
+				"error": "Room does not exist",
+			})
+			return
 		}
-		rooms[roomID] = room
-		log.Printf("👑 Created room %s (host: %s)", roomID, client.ID)
 	} else {
 		log.Printf("🔁 Joined room %s: %s", roomID, client.ID)
 	}
 
-	// 💡 NEVER allow host override
-	if room.HostID == "" {
+	if room.HostID == "" && isCreator {
 		room.HostID = client.ID
-		log.Printf("⚠️ Host reassigned to %s (should not happen)", client.ID)
+		log.Printf("⚠️ Host reassigned to %s (allowed as creator)", client.ID)
 	} else if room.HostID != client.ID {
 		log.Printf("🛡️ Preserving host %s, %s is guest", room.HostID, client.ID)
 	}
