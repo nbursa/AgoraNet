@@ -155,6 +155,9 @@ export function useWebRTC(roomId: string) {
       peer.ontrack = (event) => {
         const remoteStream = event.streams[0];
 
+        console.log("🎧 ontrack stream:", remoteStream);
+        console.log("🎧 audio tracks:", remoteStream.getAudioTracks());
+
         if (remoteStream) {
           setRemoteStreams((prev) => {
             const exists = prev.some((s) => s.id === userId);
@@ -162,6 +165,13 @@ export function useWebRTC(roomId: string) {
               ? prev
               : [...prev, { id: userId, stream: remoteStream }];
           });
+        }
+      };
+
+      peer.oniceconnectionstatechange = () => {
+        console.log("ICE connection state:", peer.iceConnectionState);
+        if (peer.iceConnectionState === "failed") {
+          console.error("ICE connection failed.");
         }
       };
 
@@ -173,6 +183,9 @@ export function useWebRTC(roomId: string) {
             if (peer.localDescription) {
               send({ type: "offer", userId, offer: peer.localDescription });
             }
+          })
+          .catch((err) => {
+            console.error("Error creating offer:", err);
           });
       }
 
