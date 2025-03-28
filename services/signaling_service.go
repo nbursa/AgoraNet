@@ -242,9 +242,14 @@ func registerClient(roomID string, client *Client) {
 		log.Printf("👑 Created room %s (host: %s)", roomID, client.ID)
 	} else {
 		log.Printf("🔁 Joined room %s: %s", roomID, client.ID)
-		if room.HostID == "" {
-			log.Printf("⚠️ Room %s has no host, denying host reassignment.", roomID)
-		}
+	}
+
+	// 💡 NEVER allow host override
+	if room.HostID == "" {
+		room.HostID = client.ID
+		log.Printf("⚠️ Host reassigned to %s (should not happen)", client.ID)
+	} else if room.HostID != client.ID {
+		log.Printf("🛡️ Preserving host %s, %s is guest", room.HostID, client.ID)
 	}
 
 	room.Clients[client.ID] = client
