@@ -61,6 +61,14 @@ export default function RoomPage() {
   const analyserRefs = useRef<Record<string, AnalyserNode>>({});
   const audioContextRef = useRef<AudioContext | null>(null);
 
+  const streamAudio = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (stream && streamAudio.current) {
+      streamAudio.current.srcObject = stream;
+    }
+  }, [stream]);
+
   const setupSpeakingDetection = useCallback(
     (userId: string, mediaStream: MediaStream, isLocal: boolean) => {
       if (!audioContextRef.current)
@@ -319,6 +327,17 @@ export default function RoomPage() {
           </ul>
         </div>
       </aside>
+
+      {stream && (
+        <audio
+          ref={streamAudio}
+          autoPlay
+          muted={false}
+          playsInline
+          controls
+          className="hidden"
+        />
+      )}
 
       <main className="flex-1 overflow-y-auto">
         <div className="flex flex-col items-center justify-start min-h-full py-10 px-6 gap-6">
