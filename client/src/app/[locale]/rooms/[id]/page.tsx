@@ -306,7 +306,7 @@ export default function RoomPage() {
           <div className="flex w-full sm:w-full gap-2">
             <Button
               onClick={handleCopyRoomUrl}
-              className="w-1/2 flex-1 text-sm sm:w-full"
+              className="w-1/2 flex-1 text-sm sm:w-full font-bold sm:font-normal"
               variant="outline"
             >
               {copied ? t("copied") : t("copy")}
@@ -314,7 +314,7 @@ export default function RoomPage() {
 
             <Button
               onClick={toggleMobileSidebar}
-              className="w-1/2 flex-1 sm:hidden"
+              className="w-1/2 flex-1 sm:hidden font-bold sm:font-normal"
               variant="outline"
             >
               {isMobileSidebarOpen
