@@ -74,6 +74,7 @@ export function useWebRTC(roomId: string) {
   const userIdRef = useRef<string | null>(null);
   const isJoiningRef = useRef(false);
   const initializedRef = useRef(false);
+  const localStreamRef = useRef<MediaStream | null>(null);
 
   const [isHost, setIsHost] = useState(false);
 
@@ -147,28 +148,36 @@ export function useWebRTC(roomId: string) {
         return existing;
       }
 
-      const peer = new RTCPeerConnection();
-      console.log(
-        "🔧 Created peer for",
-        userId,
-        initiator ? "(initiator)" : "(receiver)"
-      );
+      const iceConfig = {
+        iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+      };
 
-      if (!stream) {
-        console.warn("🛑 No local stream yet, skipping peer setup for", userId);
+      const peer = new RTCPeerConnection(iceConfig);
 
-        return peer;
+      peer.ontrack = (event) => {
+        console.log("🎧 TRACK from", userId, event.track.kind);
+
+        setRemoteStreams((prev) => {
+          const existing = prev.find((s) => s.id === userId);
+          if (existing) {
+            existing.stream.addTrack(event.track);
+            return [...prev];
+          } else {
+            const newStream = new MediaStream();
+            newStream.addTrack(event.track);
+            return [...prev, { id: userId, stream: newStream }];
+          }
+        });
+      };
+
+      const currentStream = stream || localStreamRef.current || null;
+      if (currentStream) {
+        currentStream.getTracks().forEach((track: MediaStreamTrack) => {
+          peer.addTrack(track, currentStream);
+        });
+      } else {
+        console.warn("🛑 No local stream available for peer", userId);
       }
-
-      stream.getTracks().forEach((track) => {
-        console.log(
-          "🎙️ Adding local track to peer:",
-          userId,
-          track.kind,
-          peer.connectionState
-        );
-        peer.addTrack(track, stream);
-      });
 
       peer.onicecandidate = (event) => {
         if (event.candidate) {
@@ -184,21 +193,19 @@ export function useWebRTC(roomId: string) {
         }
       };
 
-      peer.ontrack = (event) => {
-        console.log("🎧 Remote track received:", event.track, event.streams);
-        console.log("📥 Received remote track from", userId, event.track.kind);
-        const remoteStream =
-          event.streams?.[0] || new MediaStream([event.track]);
-        console.log("🎧 ontrack called, remote stream:", remoteStream);
-
-        if (remoteStream) {
-          setRemoteStreams((prev) => {
-            const exists = prev.some((s) => s.id === userId);
-            return exists
-              ? prev
-              : [...prev, { id: userId, stream: remoteStream }];
+      peer.onnegotiationneeded = () => {
+        console.log("📞 onnegotiationneeded for", userId);
+        peer
+          .createOffer()
+          .then((offer) => peer.setLocalDescription(offer))
+          .then(() => {
+            if (peer.localDescription) {
+              send({ type: "offer", userId, offer: peer.localDescription });
+            }
+          })
+          .catch((err) => {
+            console.error("❌ Error in renegotiation:", err);
           });
-        }
       };
 
       peer.onconnectionstatechange = () => {
@@ -231,6 +238,7 @@ export function useWebRTC(roomId: string) {
       }
 
       peersRef.current[userId] = peer;
+
       return peer;
     },
     [stream, send]
@@ -268,7 +276,14 @@ export function useWebRTC(roomId: string) {
   const pendingPeersRef = useRef<{ userId: string; initiator: boolean }[]>([]);
 
   useEffect(() => {
-    if (!stream) return;
+    console.log("🎯 useEffect triggered — stream:", stream);
+
+    if (!stream) {
+      console.warn("⛔ useEffect triggered but stream is null");
+      return;
+    }
+
+    console.log("🎯 STREAM READY. Pending peers:", pendingPeersRef.current);
 
     if (pendingPeersRef.current.length > 0) {
       console.log(
@@ -280,7 +295,7 @@ export function useWebRTC(roomId: string) {
       });
       pendingPeersRef.current = [];
     }
-  }, [stream, createPeer]);
+  }, [createPeer, stream]);
 
   useEffect(() => {
     if (initializedRef.current) return;
@@ -296,16 +311,35 @@ export function useWebRTC(roomId: string) {
           },
         });
 
+        localStreamRef.current = localStream;
+
         localStream.getAudioTracks().forEach((track) => {
           track.enabled = true;
         });
 
         console.log("🎙️ Local stream tracks:", localStream.getAudioTracks());
 
-        // ⏳ Set stream and wait for propagation though React
         await new Promise<void>((resolve) => {
           setStream(localStream);
-          setTimeout(resolve, 50);
+          console.log("✅ setStream called");
+
+          Object.entries(peersRef.current).forEach(([userId, peer]) => {
+            if (!peer.getSenders().length && stream) {
+              stream.getTracks().forEach((track) => {
+                console.log(
+                  "🔁 [RETRY] Adding track late for",
+                  userId,
+                  track.kind
+                );
+                peer.addTrack(track, stream);
+              });
+            }
+          });
+
+          setTimeout(() => {
+            console.log("✅ setStream done, stream should now be available");
+            resolve();
+          }, 100);
         });
 
         Object.entries(peersRef.current).forEach(([userId, peer]) => {
@@ -363,6 +397,7 @@ export function useWebRTC(roomId: string) {
               setHostId(message.hostId);
               setActiveVote(message.activeVote || null);
               setCurrentVotes(message.currentVotes || {});
+
               if (message.sharedMedia) {
                 setSharedMediaUrl(message.sharedMedia.url);
                 setSharedMediaType(message.sharedMedia.mediaType);
@@ -405,6 +440,33 @@ export function useWebRTC(roomId: string) {
                   }
                 }
               });
+
+              // 🧠 FORCE PEER SYNC after everyone joined
+              setTimeout(() => {
+                const myId = userIdRef.current;
+                if (!myId) return;
+
+                message.users.forEach((otherId) => {
+                  if (otherId !== myId) {
+                    const peer = peersRef.current[otherId];
+                    if (peer && peer.connectionState !== "connected") {
+                      console.log("🔁 Retrying peer negotiation with", otherId);
+                      peer
+                        .createOffer()
+                        .then((offer) => peer.setLocalDescription(offer))
+                        .then(() => {
+                          if (peer.localDescription) {
+                            send({
+                              type: "offer",
+                              userId: otherId,
+                              offer: peer.localDescription,
+                            });
+                          }
+                        });
+                    }
+                  }
+                });
+              }, 1000);
               break;
 
             case "offer": {

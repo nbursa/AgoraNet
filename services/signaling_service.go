@@ -99,6 +99,7 @@ func handleMessage(client *Client, msg map[string]interface{}) {
 	case "offer", "answer", "ice-candidate":
 		if targetID, ok := msg["userId"].(string); ok {
 			msg["from"] = client.ID
+			log.Printf("📡 Forwarding %s from %s to %s", msg["type"], msg["from"], targetID)
 			forwardMessage(targetID, msg)
 		}
 	case "leave":
@@ -316,8 +317,17 @@ func forwardMessage(targetID string, msg map[string]interface{}) {
 	roomLock.Lock()
 	defer roomLock.Unlock()
 
+	// 🔒 Ignore self-targeting
+	if fromID, ok := msg["from"].(string); ok && fromID == targetID {
+		log.Printf("⚠️ Skipping self-forward of %s to %s", msg["type"], targetID)
+		return
+	}
+
 	if client, ok := clients[targetID]; ok {
-		client.Conn.WriteJSON(msg)
+		err := client.Conn.WriteJSON(msg)
+		if err != nil {
+			log.Printf("❌ Failed to forward %s to %s: %v", msg["type"], targetID, err)
+		}
 	}
 }
 

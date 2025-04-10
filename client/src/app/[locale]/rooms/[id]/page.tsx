@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useWebRTC, VoteResult } from "@/hooks/useWebRTC";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/Button";
+import { VolumeMeter } from "@/components/VolumeMeter";
 
 type LegacyVoteResult = VoteResult & {
   yesCount?: number;
@@ -52,7 +53,6 @@ export default function RoomPage() {
     })
   );
 
-  const remoteAudioRefs = useRef<Record<string, HTMLAudioElement>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [copied, setCopied] = useState(false);
   const [isMicMuted, setIsMicMuted] = useState(true);
@@ -136,48 +136,8 @@ export default function RoomPage() {
   }, [stream, localUserId, setupSpeakingDetection]);
 
   useEffect(() => {
-    // Create remote audio elements when streams are available
     remoteStreams.forEach(({ id, stream }) => {
-      console.log("📡 Stream for", id, stream);
-      let audioEl = remoteAudioRefs.current[id];
-      if (!audioEl) {
-        audioEl = document.createElement("audio");
-        audioEl.volume = 1.0;
-        audioEl.muted = false;
-        audioEl.autoplay = true;
-        audioEl.setAttribute("playsinline", "true");
-        audioEl.muted = false;
-        audioEl.className = "hidden";
-        document.body.appendChild(audioEl);
-        remoteAudioRefs.current[id] = audioEl;
-      }
-
-      if (stream && audioEl.srcObject !== stream) {
-        audioEl.srcObject = stream;
-        console.log("🔗 Attached stream to audio element:", id);
-
-        setTimeout(() => {
-          audioEl
-            .play()
-            .then(() => {
-              audioEl.muted = false;
-              audioEl.volume = 1.0;
-              console.log("🔊 Forced unmute and volume set:", id);
-            })
-            .catch((err) => {
-              console.warn("⚠️ Audio play error for", id, err);
-            });
-        }, 100);
-
-        console.log("🔗 Current audioEl state:", {
-          id,
-          paused: audioEl.paused,
-          srcObject: audioEl.srcObject,
-          readyState: audioEl.readyState,
-          muted: audioEl.muted,
-          volume: audioEl.volume,
-        });
-
+      if (stream) {
         setupSpeakingDetection(id, stream, false);
       }
     });
@@ -186,15 +146,7 @@ export default function RoomPage() {
   useEffect(() => {
     const unlockAudio = () => {
       audioContextRef.current?.resume().catch(console.error);
-      Object.values(remoteAudioRefs.current).forEach((audioEl) => {
-        if (audioEl.paused) {
-          audioEl.play().then(() => {
-            audioEl.muted = false;
-            audioEl.volume = 1.0;
-            console.log("🔊 Forced unmute and volume set:", id);
-          });
-        }
-      });
+
       if (streamAudio.current?.paused) {
         streamAudio.current.play().catch(console.error);
       }
@@ -294,6 +246,8 @@ export default function RoomPage() {
   const showVoteSummary =
     showLastVote && localUserId === hostId && lastVote !== undefined;
 
+  console.log("📡 remoteStreams", remoteStreams);
+
   return (
     <div className="flex flex-col sm:flex-row w-full h-full overflow-hidden">
       {/* Sidebar */}
@@ -371,6 +325,31 @@ export default function RoomPage() {
           onError={() => console.log("❌ Local stream audio error")}
         />
       )}
+
+      {remoteStreams.map(({ id, stream }) => (
+        <audio
+          key={`${id}-${stream.id}`}
+          id={`remote-audio-${id}`}
+          autoPlay
+          playsInline
+          muted={false}
+          ref={(el) => {
+            if (el && stream && el.srcObject !== stream) {
+              el.srcObject = stream;
+              el.play()
+                .then(() => {
+                  el.muted = false;
+                  el.volume = 1.0;
+                  console.log("🔊 JSX audio auto-played:", id);
+                })
+                .catch((e) =>
+                  console.warn("⚠️ JSX audio play() failed for", id, e)
+                );
+            }
+          }}
+          className="hidden"
+        />
+      ))}
 
       <main className="flex-1 overflow-y-auto">
         <div className="flex flex-col items-center justify-start min-h-full py-10 px-6 gap-6">
@@ -588,6 +567,39 @@ export default function RoomPage() {
               </ul>
             </div>
           )}
+
+          {stream && localUserId && (
+            <div
+              key={localUserId}
+              className="flex items-center justify-between gap-4 bg-gray-800 text-white rounded-full px-3 py-2 w-full max-w-fit"
+            >
+              <div className="text-sm font-mono">
+                <span className="mr-1">{t("you")}</span>
+                <span>
+                  {hostId === localUserId
+                    ? `(${t("host")})`
+                    : `(${t("guest")})`}
+                </span>
+              </div>
+              <VolumeMeter stream={stream} />
+            </div>
+          )}
+
+          {remoteStreams.map(({ id, stream }) => (
+            <div
+              // key={id}
+              key={`${id}-${stream.id}`}
+              className="flex items-center justify-between gap-4 bg-gray-800 text-white rounded-full px-3 py-2 w-full max-w-fit"
+            >
+              <div className="text-sm font-mono">
+                <span className="mr-1">
+                  {id === hostId ? t("host") : t("guest")}
+                </span>
+                <span>({id.slice(0, 6)})</span>
+              </div>
+              <VolumeMeter stream={stream} />
+            </div>
+          ))}
         </div>
       </main>
     </div>
