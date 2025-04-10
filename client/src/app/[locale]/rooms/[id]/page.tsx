@@ -203,7 +203,7 @@ export default function RoomPage() {
 
     window.addEventListener("click", unlockAudio);
     return () => window.removeEventListener("click", unlockAudio);
-  }, []);
+  }, [id]);
 
   useEffect(() => {
     console.log("🔁 Remote streams updated:", remoteStreams);
@@ -385,7 +385,7 @@ export default function RoomPage() {
           >
             <Button
               onClick={toggleMic}
-              className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded text-sm"
+              className="bg-yellow-600 hover:bg-yellow-700 text-white h-16 sm:h-8 px-4 py-2 rounded text-sm"
               variant="ghost"
             >
               {isMicMuted ? `${t("mic-on")}` : `${t("mic-off")}`}
@@ -393,7 +393,7 @@ export default function RoomPage() {
 
             <Button
               onClick={triggerFileSelect}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
+              className="bg-blue-600 hover:bg-blue-700 text-white h-16 sm:h-8 px-4 py-2 rounded text-sm"
               variant="ghost"
             >
               {t("choose")}
@@ -402,7 +402,7 @@ export default function RoomPage() {
             {localUserId === hostId && (
               <Button
                 onClick={() => setShowVoteHistory((prev) => !prev)}
-                className={`bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm ${
+                className={`bg-purple-600 hover:bg-purple-700 text-white h-16 sm:h-8 px-4 py-2 rounded text-sm ${
                   normalizedVoteHistory.length === 0
                     ? "opacity-50 cursor-not-allowed"
                     : ""
@@ -419,7 +419,7 @@ export default function RoomPage() {
                 leaveRoom();
                 window.location.href = "/rooms";
               }}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm"
+              className="bg-red-600 hover:bg-red-700 text-white h-16 sm:h-8 px-4 py-2 rounded text-sm"
               variant="ghost"
             >
               {t("leave")}
@@ -427,17 +427,17 @@ export default function RoomPage() {
           </div>
 
           {localUserId === hostId && !activeVote && (
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2 w-full max-w-3xl">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full max-w-3xl">
               <input
                 type="text"
                 placeholder={t("vote.placeholder")}
                 value={voteQuestion}
                 onChange={(e) => setVoteQuestion(e.target.value)}
-                className="flex-1 px-3 py-2 rounded bg-gray-800 text-white placeholder-gray-400 text-sm"
+                className="flex-1 px-3 py-4 sm:py-2 rounded bg-gray-800 text-white placeholder-gray-400 text-sm"
               />
               <Button
                 onClick={handleCreateVote}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 h-9 rounded text-sm whitespace-nowrap"
+                className="bg-green-600 hover:bg-green-700 text-white h-14 sm:h-8 px-4 rounded text-sm whitespace-nowrap"
                 variant="ghost"
               >
                 {t("vote.start")}
