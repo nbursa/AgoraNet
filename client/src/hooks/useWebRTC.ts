@@ -142,26 +142,54 @@ export function useWebRTC(roomId: string) {
       const existing = peersRef.current[userId];
       if (existing) return existing;
 
-      const peer = new RTCPeerConnection();
-
-      if (stream) {
-        stream.getTracks().forEach((track) => {
-          peer.addTrack(track, stream);
-        });
+      if (existing) {
+        console.warn("⚠️ Tried to create duplicate peer for", userId);
+        return existing;
       }
+
+      const peer = new RTCPeerConnection();
+      console.log(
+        "🔧 Created peer for",
+        userId,
+        initiator ? "(initiator)" : "(receiver)"
+      );
+
+      if (!stream) {
+        console.warn("🛑 No local stream yet, skipping peer setup for", userId);
+
+        return peer;
+      }
+
+      stream.getTracks().forEach((track) => {
+        console.log(
+          "🎙️ Adding local track to peer:",
+          userId,
+          track.kind,
+          peer.connectionState
+        );
+        peer.addTrack(track, stream);
+      });
 
       peer.onicecandidate = (event) => {
         if (event.candidate) {
+          console.log("📡 Sending ICE candidate to", userId);
+
           send({
             type: "ice-candidate",
             userId,
             candidate: event.candidate.toJSON(),
           });
+        } else {
+          console.log("📡 ICE candidate gathering finished for", userId);
         }
       };
 
       peer.ontrack = (event) => {
-        const remoteStream = event.streams[0];
+        console.log("🎧 Remote track received:", event.track, event.streams);
+        console.log("📥 Received remote track from", userId, event.track.kind);
+        const remoteStream =
+          event.streams?.[0] || new MediaStream([event.track]);
+        console.log("🎧 ontrack called, remote stream:", remoteStream);
 
         if (remoteStream) {
           setRemoteStreams((prev) => {
@@ -173,9 +201,18 @@ export function useWebRTC(roomId: string) {
         }
       };
 
+      peer.onconnectionstatechange = () => {
+        console.log("🔄 Connection state:", peer.connectionState);
+      };
+
       peer.oniceconnectionstatechange = () => {
+        console.log("📡 ICE state for", userId, peer.iceConnectionState);
+        if (peer.iceConnectionState === "connected") {
+          console.log("✅ Peer connected:", userId);
+        }
         if (peer.iceConnectionState === "failed") {
-          console.error("ICE connection failed.");
+          console.error("❌ ICE connection failed for", userId);
+          peer.restartIce();
         }
       };
 
@@ -228,6 +265,23 @@ export function useWebRTC(roomId: string) {
     router.push("/rooms");
   }, [send, router]);
 
+  const pendingPeersRef = useRef<{ userId: string; initiator: boolean }[]>([]);
+
+  useEffect(() => {
+    if (!stream) return;
+
+    if (pendingPeersRef.current.length > 0) {
+      console.log(
+        "🎯 Running deferred peers after stream init:",
+        pendingPeersRef.current
+      );
+      pendingPeersRef.current.forEach(({ userId, initiator }) => {
+        createPeer(userId, initiator);
+      });
+      pendingPeersRef.current = [];
+    }
+  }, [stream, createPeer]);
+
   useEffect(() => {
     if (initializedRef.current) return;
     initializedRef.current = true;
@@ -241,16 +295,53 @@ export function useWebRTC(roomId: string) {
             autoGainControl: true,
           },
         });
-        setStream(localStream);
+
+        localStream.getAudioTracks().forEach((track) => {
+          track.enabled = true;
+        });
+
+        console.log("🎙️ Local stream tracks:", localStream.getAudioTracks());
+
+        // ⏳ Set stream and wait for propagation though React
+        await new Promise<void>((resolve) => {
+          setStream(localStream);
+          setTimeout(resolve, 50);
+        });
+
+        Object.entries(peersRef.current).forEach(([userId, peer]) => {
+          localStream.getTracks().forEach((track) => {
+            console.log("🔁 Late adding track to peer:", userId, track.kind);
+            peer.addTrack(track, localStream);
+          });
+        });
+
+        console.log("🎤 Local stream tracks:", localStream.getTracks());
+        console.log("🎙️ Audio tracks:", localStream.getAudioTracks());
 
         const storedId = localStorage.getItem("clientId") || "";
         const socket = new WebSocket(SIGNALING_SERVER);
         socketRef.current = socket;
 
-        socket.onopen = () => {
-          console.info("✅ WebSocket connected");
-          socket.send(JSON.stringify({ type: "init", userId: storedId }));
-        };
+        // ⏳ Wait for web socket
+        await new Promise<void>((resolve, reject) => {
+          if (socket.readyState === WebSocket.OPEN) return resolve();
+
+          const onOpen = () => {
+            socket.removeEventListener("open", onOpen);
+            resolve();
+          };
+
+          const onError = (err: Event) => {
+            socket.removeEventListener("error", onError);
+            reject(err);
+          };
+
+          socket.addEventListener("open", onOpen);
+          socket.addEventListener("error", onError);
+        });
+
+        console.info("✅ WebSocket connected");
+        socket.send(JSON.stringify({ type: "init", userId: storedId }));
 
         socket.onmessage = async (event) => {
           const message: SignalMessage = JSON.parse(event.data);
@@ -295,25 +386,84 @@ export function useWebRTC(roomId: string) {
               } else {
                 setVoteHistory([]);
               }
+
+              message.users.forEach((userId) => {
+                if (userId !== userIdRef.current && !peersRef.current[userId]) {
+                  const shouldInitiate = userIdRef.current! > userId;
+
+                  if (stream) {
+                    createPeer(userId, shouldInitiate);
+                  } else {
+                    console.warn(
+                      "⚠️ Stream not ready yet, deferring peer creation for",
+                      userId
+                    );
+                    pendingPeersRef.current.push({
+                      userId,
+                      initiator: shouldInitiate,
+                    });
+                  }
+                }
+              });
               break;
 
             case "offer": {
               const peer =
                 peersRef.current[message.userId] ||
                 createPeer(message.userId, false);
-              await peer.setRemoteDescription(
-                new RTCSessionDescription(message.offer)
-              );
-              const answer = await peer.createAnswer();
-              await peer.setLocalDescription(answer);
-              send({ type: "answer", userId: message.userId, answer });
+
+              console.log("📥 Got offer. Peer state:", peer.signalingState);
+
+              if (
+                peer.signalingState !== "stable" &&
+                peer.signalingState !== "have-local-offer"
+              ) {
+                console.warn(
+                  "⛔ Offer received in invalid state:",
+                  peer.signalingState
+                );
+                return;
+              }
+
+              peer
+                .setRemoteDescription(new RTCSessionDescription(message.offer))
+                .then(() => peer.createAnswer())
+                .then((answer) =>
+                  peer.setLocalDescription(answer).then(() => answer)
+                )
+                .then((answer) => {
+                  send({
+                    type: "answer",
+                    userId: message.userId,
+                    answer,
+                  });
+                  console.log("📨 Sent answer to", message.userId);
+                })
+                .catch((err) => {
+                  console.error("❌ Error during answer handshake:", err);
+                });
+
               break;
             }
 
             case "answer":
-              peersRef.current[message.userId]?.setRemoteDescription(
-                new RTCSessionDescription(message.answer)
-              );
+              const peer = peersRef.current[message.userId];
+              console.log("📥 Got answer. Peer state:", peer?.signalingState);
+
+              if (peer && peer.signalingState === "have-local-offer") {
+                peer
+                  .setRemoteDescription(
+                    new RTCSessionDescription(message.answer)
+                  )
+                  .catch((err) => {
+                    console.error("❌ Failed to set remote answer:", err);
+                  });
+              } else {
+                console.warn(
+                  "⚠️ Skipping setRemoteDescription: peer in state",
+                  peer?.signalingState
+                );
+              }
               break;
 
             case "ice-candidate":
@@ -370,7 +520,7 @@ export function useWebRTC(roomId: string) {
     return () => {
       leaveRoom();
     };
-  }, [roomId, createPeer, leaveRoom, send, LOCAL_STORAGE_KEY]);
+  }, [roomId, createPeer, leaveRoom, send, LOCAL_STORAGE_KEY, stream]);
 
   return {
     stream,

@@ -16,6 +16,7 @@ type LegacyVoteResult = VoteResult & {
 export default function RoomPage() {
   const t = useTranslations("room");
   const { id } = useParams();
+  const [hydrated, setHydrated] = useState(false);
 
   const {
     stream,
@@ -37,6 +38,10 @@ export default function RoomPage() {
     sendSpeakingStatus,
     voteHistory,
   } = useWebRTC(id as string);
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   const normalizedVoteHistory = (voteHistory as LegacyVoteResult[]).map(
     (v) => ({
@@ -133,6 +138,7 @@ export default function RoomPage() {
   useEffect(() => {
     // Create remote audio elements when streams are available
     remoteStreams.forEach(({ id, stream }) => {
+      console.log("📡 Stream for", id, stream);
       let audioEl = remoteAudioRefs.current[id];
       if (!audioEl) {
         audioEl = document.createElement("audio");
@@ -148,24 +154,29 @@ export default function RoomPage() {
 
       if (stream && audioEl.srcObject !== stream) {
         audioEl.srcObject = stream;
+        console.log("🔗 Attached stream to audio element:", id);
 
-        audioEl.onloadedmetadata = () => {
-          const playAttempt = audioEl.play();
-          if (playAttempt !== undefined) {
-            playAttempt
-              .then(() => {
-                console.log("🔊 Playing remote stream for", id);
-              })
-              .catch((err) => {
-                console.warn("⚠️ Autoplay blocked for", id, err);
-                const clickHandler = () => {
-                  audioEl.play().catch(console.error);
-                  window.removeEventListener("click", clickHandler);
-                };
-                window.addEventListener("click", clickHandler);
-              });
-          }
-        };
+        setTimeout(() => {
+          audioEl
+            .play()
+            .then(() => {
+              audioEl.muted = false;
+              audioEl.volume = 1.0;
+              console.log("🔊 Forced unmute and volume set:", id);
+            })
+            .catch((err) => {
+              console.warn("⚠️ Audio play error for", id, err);
+            });
+        }, 100);
+
+        console.log("🔗 Current audioEl state:", {
+          id,
+          paused: audioEl.paused,
+          srcObject: audioEl.srcObject,
+          readyState: audioEl.readyState,
+          muted: audioEl.muted,
+          volume: audioEl.volume,
+        });
 
         setupSpeakingDetection(id, stream, false);
       }
@@ -174,11 +185,22 @@ export default function RoomPage() {
 
   useEffect(() => {
     const unlockAudio = () => {
+      audioContextRef.current?.resume().catch(console.error);
       Object.values(remoteAudioRefs.current).forEach((audioEl) => {
-        audioEl?.play().catch(console.error);
+        if (audioEl.paused) {
+          audioEl.play().then(() => {
+            audioEl.muted = false;
+            audioEl.volume = 1.0;
+            console.log("🔊 Forced unmute and volume set:", id);
+          });
+        }
       });
+      if (streamAudio.current?.paused) {
+        streamAudio.current.play().catch(console.error);
+      }
       window.removeEventListener("click", unlockAudio);
     };
+
     window.addEventListener("click", unlockAudio);
     return () => window.removeEventListener("click", unlockAudio);
   }, []);
@@ -218,6 +240,14 @@ export default function RoomPage() {
       setHasVoted(true);
     }
   }, [currentVotes, localUserId]);
+
+  useEffect(() => {
+    if (remoteStreams.length === 0) {
+      console.warn("🚨 remoteStreams reset detected!");
+    }
+  }, [remoteStreams]);
+
+  if (!hydrated) return null;
 
   const toggleMobileSidebar = () => setIsMobileSidebarOpen((prev) => !prev);
 
@@ -337,6 +367,8 @@ export default function RoomPage() {
           playsInline
           controls
           className="hidden"
+          onPlay={() => console.log("▶️ Local stream audio playing")}
+          onError={() => console.log("❌ Local stream audio error")}
         />
       )}
 

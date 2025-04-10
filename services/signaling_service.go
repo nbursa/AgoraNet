@@ -177,10 +177,13 @@ func HandleWebSocket(c *ws.Conn) {
 	clientID := ""
 	defer func() {
 		if clientID != "" {
-			if client, ok := clients[clientID]; ok {
-				removeClient(client)
-				log.Println("❌ Disconnected:", clientID)
+			client, exists := clients[clientID]
+			if !exists || client == nil {
+				log.Printf("⚠️ Skipping cleanup: client %s already nil or removed", clientID)
+				return
 			}
+			removeClient(client)
+			log.Println("❌ Disconnected:", clientID)
 		}
 	}()
 
@@ -270,6 +273,11 @@ func registerClient(roomID string, client *Client, isCreator bool) {
 }
 
 func removeClient(client *Client) {
+	if client == nil {
+		log.Println("⚠️ Tried to remove nil client")
+		return
+	}
+
 	roomLock.Lock()
 	defer roomLock.Unlock()
 
