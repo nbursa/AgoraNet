@@ -56,11 +56,10 @@ export default function RoomPage() {
   const [showLastVote, setShowLastVote] = useState(false);
   const [showVoteHistory, setShowVoteHistory] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const prevVoteRef = useRef<string | null>(null);
 
+  const prevVoteRef = useRef<string | null>(null);
   const analyserRefs = useRef<Record<string, AnalyserNode>>({});
   const audioContextRef = useRef<AudioContext | null>(null);
-
   const streamAudio = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -137,6 +136,8 @@ export default function RoomPage() {
       let audioEl = remoteAudioRefs.current[id];
       if (!audioEl) {
         audioEl = document.createElement("audio");
+        audioEl.volume = 1.0;
+        audioEl.muted = false;
         audioEl.autoplay = true;
         audioEl.setAttribute("playsinline", "true");
         audioEl.muted = false;
@@ -332,7 +333,7 @@ export default function RoomPage() {
         <audio
           ref={streamAudio}
           autoPlay
-          muted={false}
+          muted={true}
           playsInline
           controls
           className="hidden"

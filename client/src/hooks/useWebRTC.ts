@@ -235,7 +235,11 @@ export function useWebRTC(roomId: string) {
     const connect = async () => {
       try {
         const localStream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
         });
         setStream(localStream);
 
