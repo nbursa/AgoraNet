@@ -75,6 +75,7 @@ export function useWebRTC(roomId: string) {
   const isJoiningRef = useRef(false);
   const initializedRef = useRef(false);
   const localStreamRef = useRef<MediaStream | null>(null);
+  const deferredPeersRef = useRef<Set<string>>(new Set());
 
   const [isHost, setIsHost] = useState(false);
 
@@ -157,27 +158,19 @@ export function useWebRTC(roomId: string) {
       peer.ontrack = (event) => {
         console.log("🎧 TRACK from", userId, event.track.kind);
 
+        const stream = event.streams?.[0];
+
+        if (!stream) return;
+
         setRemoteStreams((prev) => {
-          const existing = prev.find((s) => s.id === userId);
-          if (existing) {
-            existing.stream.addTrack(event.track);
-            return [...prev];
-          } else {
-            const newStream = new MediaStream();
-            newStream.addTrack(event.track);
-            return [...prev, { id: userId, stream: newStream }];
-          }
+          const map = new Map(prev.map((s) => [s.id, s.stream]));
+          map.set(userId, stream);
+          return Array.from(map.entries()).map(([id, stream]) => ({
+            id,
+            stream,
+          }));
         });
       };
-
-      const currentStream = stream || localStreamRef.current || null;
-      if (currentStream) {
-        currentStream.getTracks().forEach((track: MediaStreamTrack) => {
-          peer.addTrack(track, currentStream);
-        });
-      } else {
-        console.warn("🛑 No local stream available for peer", userId);
-      }
 
       peer.onicecandidate = (event) => {
         if (event.candidate) {
@@ -209,7 +202,11 @@ export function useWebRTC(roomId: string) {
       };
 
       peer.onconnectionstatechange = () => {
-        console.log("🔄 Connection state:", peer.connectionState);
+        if (peer.connectionState === "connected") {
+          console.log(`✅ Peer ${userId} connected.`);
+        } else if (peer.connectionState === "disconnected") {
+          console.warn(`⚠️ Peer ${userId} disconnected.`);
+        }
       };
 
       peer.oniceconnectionstatechange = () => {
@@ -239,9 +236,16 @@ export function useWebRTC(roomId: string) {
 
       peersRef.current[userId] = peer;
 
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach((track) => {
+          console.log("🎤 Adding local track to peer:", userId, track.kind);
+          peer.addTrack(track, localStreamRef.current!);
+        });
+      }
+
       return peer;
     },
-    [stream, send]
+    [send]
   );
 
   const leaveRoom = useCallback(() => {
@@ -273,30 +277,6 @@ export function useWebRTC(roomId: string) {
     router.push("/rooms");
   }, [send, router]);
 
-  const pendingPeersRef = useRef<{ userId: string; initiator: boolean }[]>([]);
-
-  useEffect(() => {
-    console.log("🎯 useEffect triggered — stream:", stream);
-
-    if (!stream) {
-      console.warn("⛔ useEffect triggered but stream is null");
-      return;
-    }
-
-    console.log("🎯 STREAM READY. Pending peers:", pendingPeersRef.current);
-
-    if (pendingPeersRef.current.length > 0) {
-      console.log(
-        "🎯 Running deferred peers after stream init:",
-        pendingPeersRef.current
-      );
-      pendingPeersRef.current.forEach(({ userId, initiator }) => {
-        createPeer(userId, initiator);
-      });
-      pendingPeersRef.current = [];
-    }
-  }, [createPeer, stream]);
-
   useEffect(() => {
     if (initializedRef.current) return;
     initializedRef.current = true;
@@ -319,19 +299,34 @@ export function useWebRTC(roomId: string) {
 
         console.log("🎙️ Local stream tracks:", localStream.getAudioTracks());
 
+        setStream(localStream);
+
         await new Promise<void>((resolve) => {
-          setStream(localStream);
+          Object.entries(peersRef.current).forEach(([userId, peer]) => {
+            peer.getReceivers().forEach((receiver) => {
+              const track = receiver.track;
+              if (track) {
+                const newStream = new MediaStream([track]);
+                setRemoteStreams((prev) => {
+                  const exists = prev.find((s) => s.id === userId);
+                  if (exists) return prev;
+                  return [...prev, { id: userId, stream: newStream }];
+                });
+              }
+            });
+          });
+
           console.log("✅ setStream called");
 
           Object.entries(peersRef.current).forEach(([userId, peer]) => {
-            if (!peer.getSenders().length && stream) {
-              stream.getTracks().forEach((track) => {
+            if (!peer.getSenders().length && localStream) {
+              localStream.getTracks().forEach((track) => {
                 console.log(
                   "🔁 [RETRY] Adding track late for",
                   userId,
                   track.kind
                 );
-                peer.addTrack(track, stream);
+                peer.addTrack(track, localStream);
               });
             }
           });
@@ -389,6 +384,33 @@ export function useWebRTC(roomId: string) {
               const activeRooms = localStorage.getItem("activeRooms");
               const isCreator =
                 activeRooms && JSON.parse(activeRooms).includes(roomId);
+
+              const waitForStream = () =>
+                new Promise<void>((resolve) => {
+                  const check = () => {
+                    if (
+                      localStreamRef.current &&
+                      localStreamRef.current.active
+                    ) {
+                      resolve();
+                      deferredPeersRef.current.forEach((uid) => {
+                        console.log(
+                          "🔁 Creating deferred peer after stream ready:",
+                          uid
+                        );
+                        const shouldInitiate = userIdRef.current! > uid;
+                        createPeer(uid, shouldInitiate);
+                      });
+                      deferredPeersRef.current.clear();
+                    } else {
+                      setTimeout(check, 100);
+                    }
+                  };
+                  check();
+                });
+
+              await waitForStream();
+
               send({ type: "join", roomId, isCreator });
               break;
 
@@ -429,14 +451,11 @@ export function useWebRTC(roomId: string) {
                   if (stream) {
                     createPeer(userId, shouldInitiate);
                   } else {
+                    deferredPeersRef.current.add(userId);
                     console.warn(
                       "⚠️ Stream not ready yet, deferring peer creation for",
                       userId
                     );
-                    pendingPeersRef.current.push({
-                      userId,
-                      initiator: shouldInitiate,
-                    });
                   }
                 }
               });
@@ -583,6 +602,26 @@ export function useWebRTC(roomId: string) {
       leaveRoom();
     };
   }, [roomId, createPeer, leaveRoom, send, LOCAL_STORAGE_KEY, stream]);
+
+  useEffect(() => {
+    const retryDeferredPeers = () => {
+      const myId = userIdRef.current;
+      if (!stream || !myId) return;
+
+      participants.forEach((uid) => {
+        if (uid === myId) return;
+
+        if (!peersRef.current[uid]) {
+          console.log("🔁 Retrying deferred peer for", uid);
+          const shouldInitiate = myId > uid;
+          createPeer(uid, shouldInitiate);
+        }
+      });
+    };
+
+    const interval = setInterval(retryDeferredPeers, 1500);
+    return () => clearInterval(interval);
+  }, [participants, stream, createPeer]);
 
   return {
     stream,
