@@ -70,6 +70,16 @@ export default function RoomPage() {
   useEffect(() => {
     if (stream && streamAudio.current) {
       streamAudio.current.srcObject = stream;
+      streamAudio.current
+        .play()
+        .then(() => {
+          streamAudio.current!.muted = false;
+          streamAudio.current!.volume = 1.0;
+          console.log("▶️ Local stream audio playing");
+        })
+        .catch((err) => {
+          console.error("❌ Local stream audio playback failed:", err);
+        });
     }
   }, [stream]);
 
@@ -199,6 +209,12 @@ export default function RoomPage() {
     }
   }, [remoteStreams]);
 
+  remoteStreams.forEach(({ stream }) => {
+    if (stream.getTracks().length === 0) {
+      console.warn("🚨 Stream has no tracks, likely hydration issue");
+    }
+  });
+
   if (!hydrated) return null;
 
   const toggleMobileSidebar = () => setIsMobileSidebarOpen((prev) => !prev);
@@ -317,12 +333,10 @@ export default function RoomPage() {
         <audio
           ref={streamAudio}
           autoPlay
-          muted={true}
           playsInline
+          muted={false}
           controls
           className="hidden"
-          onPlay={() => console.log("▶️ Local stream audio playing")}
-          onError={() => console.log("❌ Local stream audio error")}
         />
       )}
 
@@ -587,7 +601,6 @@ export default function RoomPage() {
 
           {remoteStreams.map(({ id, stream }) => (
             <div
-              // key={id}
               key={`${id}-${stream.id}`}
               className="flex items-center justify-between gap-4 bg-gray-800 text-white rounded-full px-3 py-2 w-full max-w-fit"
             >
