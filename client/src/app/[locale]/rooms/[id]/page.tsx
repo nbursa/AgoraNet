@@ -85,6 +85,8 @@ export default function RoomPage() {
 
   const setupSpeakingDetection = useCallback(
     (userId: string, mediaStream: MediaStream, isLocal: boolean) => {
+      if (analyserRefs.current[userId]) return;
+
       if (!audioContextRef.current)
         audioContextRef.current = new AudioContext();
       const audioContext = audioContextRef.current;
@@ -151,7 +153,7 @@ export default function RoomPage() {
         setupSpeakingDetection(id, stream, false);
       }
     });
-  }, [remoteStreams, setupSpeakingDetection]);
+  }, [remoteStreams, setupSpeakingDetection, localUserId]);
 
   useEffect(() => {
     const unlockAudio = () => {
@@ -340,36 +342,48 @@ export default function RoomPage() {
         />
       )}
 
-      {remoteStreams.map(({ id, stream }) => (
-        <audio
-          key={`${id}-${stream.id}`}
-          id={`remote-audio-${id}`}
-          autoPlay
-          playsInline
-          muted={false}
-          ref={(el) => {
-            if (el && stream && el.srcObject !== stream) {
-              el.srcObject = stream;
-              el.play()
-                .then(() => {
-                  el.muted = false;
-                  el.volume = 1.0;
-                  console.log("🔊 JSX audio auto-played:", id);
-                })
-                .catch((e) =>
-                  console.warn("⚠️ JSX audio play() failed for", id, e)
-                );
-            }
-          }}
-          className="hidden"
-        />
-      ))}
+      {remoteStreams
+        .filter(({ id }) => id !== localUserId)
+        .map(({ id, stream }) => (
+          <audio
+            key={`${id}-${stream.id}`}
+            id={`remote-audio-${id}`}
+            autoPlay
+            playsInline
+            muted={false}
+            ref={(el) => {
+              if (el && stream && el.srcObject !== stream) {
+                el.srcObject = stream;
+                el.play()
+                  .then(() => {
+                    el.muted = false;
+                    el.volume = 1.0;
+                    console.log("🔊 JSX audio auto-played:", id);
+                  })
+                  .catch((e) =>
+                    console.warn("⚠️ JSX audio play() failed for", id, e)
+                  );
+              }
+            }}
+            className="hidden"
+          />
+        ))}
 
       <main className="flex-1 overflow-y-auto">
         <div className="flex flex-col items-center justify-start min-h-full py-10 px-6 gap-6">
-          <h1 className="text-2xl font-bold">
-            {t("room")} {id}
-          </h1>
+          <div>
+            <h1 className="text-2xl font-bold mb-2">
+              {t("room")} {id}
+            </h1>
+
+            <Button
+              onClick={handleCopyRoomUrl}
+              className="flex-1 text-sm h-16 w-full font-bold sm:font-normal sm:h-8"
+              variant="outline"
+            >
+              {copied ? t("copied") : t("copy")}
+            </Button>
+          </div>
 
           <div
             className={`grid grid-cols-2 gap-4 w-full max-w-3xl ${
@@ -582,37 +596,51 @@ export default function RoomPage() {
             </div>
           )}
 
-          {stream && localUserId && (
-            <div
-              key={localUserId}
-              className="flex items-center justify-between gap-4 bg-gray-800 text-white rounded-full px-3 py-2 w-full max-w-fit"
-            >
-              <div className="text-sm font-mono">
-                <span className="mr-1">{t("you")}</span>
-                <span>
-                  {hostId === localUserId
-                    ? `(${t("host")})`
-                    : `(${t("guest")})`}
-                </span>
+          <div className="block w-full sm:inline-flex sm:items-center sm:justify-center sm:flex-wrap sm:gap-4">
+            {stream && localUserId && (
+              <div
+                key={localUserId}
+                className="flex items-center justify-between gap-4 bg-gray-800 text-white rounded-full px-3 py-2 w-full mb-2 sm:max-w-fit"
+              >
+                <div className="text-sm font-mono">
+                  <span className="mr-1">{t("you")}</span>
+                  <span>
+                    {hostId === localUserId
+                      ? `(${t("host")})`
+                      : `(${t("guest")})`}
+                  </span>
+                </div>
+                {analyserRefs.current[localUserId] && (
+                  <VolumeMeter analyser={analyserRefs.current[localUserId]} />
+                )}
               </div>
-              <VolumeMeter stream={stream} />
+            )}
+
+            {remoteStreams
+              .filter(({ id }) => id !== localUserId)
+              .map(({ id, stream }) => (
+                <div
+                  key={`${id}-${stream.id}`}
+                  className="flex items-center justify-between gap-4 bg-gray-800 text-white rounded-full px-3 py-2 w-full mb-2 sm:max-w-fit"
+                >
+                  <div className="text-sm font-mono">
+                    <span className="mr-1">
+                      {id === hostId ? t("host") : t("guest")}
+                    </span>
+                    <span>({id.slice(0, 6)})</span>
+                  </div>
+                  {/* <VolumeMeter key={id} analyser={analyserRefs.current[id]} /> */}
+                  {analyserRefs.current[id] && (
+                    <VolumeMeter key={id} analyser={analyserRefs.current[id]} />
+                  )}
+                </div>
+              ))}
+          </div>
+          {remoteStreams.length === 0 && (
+            <div className="text-red-500 font-mono text-sm">
+              ⚠️ No remote streams available
             </div>
           )}
-
-          {remoteStreams.map(({ id, stream }) => (
-            <div
-              key={`${id}-${stream.id}`}
-              className="flex items-center justify-between gap-4 bg-gray-800 text-white rounded-full px-3 py-2 w-full max-w-fit"
-            >
-              <div className="text-sm font-mono">
-                <span className="mr-1">
-                  {id === hostId ? t("host") : t("guest")}
-                </span>
-                <span>({id.slice(0, 6)})</span>
-              </div>
-              <VolumeMeter stream={stream} />
-            </div>
-          ))}
         </div>
       </main>
     </div>

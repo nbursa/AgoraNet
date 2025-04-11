@@ -2,20 +2,14 @@
 import React, { useEffect, useRef } from "react";
 
 type Props = {
-  stream: MediaStream;
+  analyser: AnalyserNode;
 };
 
-export const VolumeMeter: React.FC<Props> = ({ stream }) => {
+export const VolumeMeter: React.FC<Props> = ({ analyser }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    const audioContext = new AudioContext();
-    const source = audioContext.createMediaStreamSource(stream);
-    const analyser = audioContext.createAnalyser();
     const dataArray = new Uint8Array(analyser.frequencyBinCount);
-    source.connect(analyser);
-    analyser.fftSize = 512;
-
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext("2d")!;
     canvas.width = 100;
@@ -36,11 +30,9 @@ export const VolumeMeter: React.FC<Props> = ({ stream }) => {
     draw();
 
     return () => {
-      source.disconnect();
-      analyser.disconnect();
-      audioContext.close();
+      analyser.disconnect(); // precaution only
     };
-  }, [stream]);
+  }, [analyser]);
 
   return <canvas ref={canvasRef} className="rounded bg-black" />;
 };
