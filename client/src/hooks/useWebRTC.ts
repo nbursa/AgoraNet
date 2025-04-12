@@ -155,37 +155,6 @@ export function useWebRTC(roomId: string) {
 
       const peer = new RTCPeerConnection(iceConfig);
 
-      peer.ontrack = (event) => {
-        console.log("🎧 TRACK from", userId, event.track.kind);
-
-        const stream = event.streams?.[0];
-
-        if (!stream) return;
-
-        setRemoteStreams((prev) => {
-          const map = new Map(prev.map((s) => [s.id, s.stream]));
-          map.set(userId, stream);
-          return Array.from(map.entries()).map(([id, stream]) => ({
-            id,
-            stream,
-          }));
-        });
-      };
-
-      peer.onicecandidate = (event) => {
-        if (event.candidate) {
-          console.log("📡 Sending ICE candidate to", userId);
-
-          send({
-            type: "ice-candidate",
-            userId,
-            candidate: event.candidate.toJSON(),
-          });
-        } else {
-          console.log("📡 ICE candidate gathering finished for", userId);
-        }
-      };
-
       peer.onnegotiationneeded = () => {
         console.log("📞 onnegotiationneeded for", userId);
         peer
@@ -218,6 +187,44 @@ export function useWebRTC(roomId: string) {
           console.error("❌ ICE connection failed for", userId);
           peer.restartIce();
         }
+      };
+
+      peer.onicecandidate = (event) => {
+        if (event.candidate) {
+          console.log("📡 Sending ICE candidate to", userId);
+
+          send({
+            type: "ice-candidate",
+            userId,
+            candidate: event.candidate.toJSON(),
+          });
+        } else {
+          console.log("📡 ICE candidate gathering finished for", userId);
+        }
+      };
+
+      peer.ontrack = (event) => {
+        console.log("🎧 TRACK from", userId, event.track.kind);
+
+        if (!event.streams?.[0]) {
+          console.warn("⚠️ No stream in ontrack event");
+          return;
+        }
+
+        const stream = event.streams?.[0];
+
+        // if (!stream) return;
+
+        setRemoteStreams((prev) => {
+          const map = new Map(prev.map((s) => [s.id, s.stream]));
+          map.set(userId, stream);
+          return Array.from(map.entries()).map(([id, stream]) => ({
+            id,
+            stream,
+          }));
+        });
+
+        console.log("REMOTESTREAMS-1:", remoteStreams);
       };
 
       if (initiator) {
@@ -312,6 +319,7 @@ export function useWebRTC(roomId: string) {
                   if (exists) return prev;
                   return [...prev, { id: userId, stream: newStream }];
                 });
+                console.log("REMOTESTREAMS-2:", remoteStreams);
               }
             });
           });
@@ -601,7 +609,15 @@ export function useWebRTC(roomId: string) {
     return () => {
       leaveRoom();
     };
-  }, [roomId, createPeer, leaveRoom, send, LOCAL_STORAGE_KEY, stream]);
+  }, [
+    roomId,
+    createPeer,
+    leaveRoom,
+    send,
+    LOCAL_STORAGE_KEY,
+    stream,
+    remoteStreams,
+  ]);
 
   useEffect(() => {
     const retryDeferredPeers = () => {

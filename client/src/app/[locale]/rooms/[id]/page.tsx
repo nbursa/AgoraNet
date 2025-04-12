@@ -147,13 +147,14 @@ export default function RoomPage() {
     }
   }, [stream, localUserId, setupSpeakingDetection]);
 
-  useEffect(() => {
-    remoteStreams.forEach(({ id, stream }) => {
-      if (stream) {
-        setupSpeakingDetection(id, stream, false);
-      }
-    });
-  }, [remoteStreams, setupSpeakingDetection, localUserId]);
+  // useEffect(() => {
+  //   remoteStreams.forEach(({ id, stream }) => {
+  //     if (!analyserRefs.current[id]) {
+  //       console.log("🔁 Force setting up analyser for", id);
+  //       setupSpeakingDetection(id, stream, false);
+  //     }
+  //   });
+  // }, [remoteStreams, setupSpeakingDetection]);
 
   useEffect(() => {
     const unlockAudio = () => {
@@ -629,14 +630,17 @@ export default function RoomPage() {
                     </span>
                     <span>({id.slice(0, 6)})</span>
                   </div>
-                  {/* <VolumeMeter key={id} analyser={analyserRefs.current[id]} /> */}
-                  {analyserRefs.current[id] && (
-                    <VolumeMeter key={id} analyser={analyserRefs.current[id]} />
+                  {analyserRefs.current[id] ? (
+                    <VolumeMeter analyser={analyserRefs.current[id]} />
+                  ) : (
+                    <span className="text-xs text-gray-500 italic">
+                      loading...
+                    </span>
                   )}
                 </div>
               ))}
           </div>
-          {remoteStreams.length === 0 && (
+          {remoteStreams.length <= 1 && (
             <div className="text-red-500 font-mono text-sm">
               ⚠️ No remote streams available
             </div>
