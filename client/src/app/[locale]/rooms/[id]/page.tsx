@@ -73,7 +73,7 @@ export default function RoomPage() {
       streamAudio.current
         .play()
         .then(() => {
-          streamAudio.current!.muted = false;
+          streamAudio.current!.muted = true;
           streamAudio.current!.volume = 1.0;
           console.log("▶️ Local stream audio playing");
         })
@@ -334,10 +334,10 @@ export default function RoomPage() {
 
       {stream && (
         <audio
+          key={`${id}-${stream.id}-${stream.active}`}
           ref={streamAudio}
           autoPlay
           playsInline
-          muted={false}
           controls
           className="hidden"
         />
@@ -347,7 +347,7 @@ export default function RoomPage() {
         .filter(({ id }) => id !== localUserId)
         .map(({ id, stream }) => (
           <audio
-            key={`${id}-${stream.id}`}
+            key={`${id}-${stream.id}-${Date.now()}`}
             id={`remote-audio-${id}`}
             autoPlay
             playsInline

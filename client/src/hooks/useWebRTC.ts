@@ -215,13 +215,26 @@ export function useWebRTC(roomId: string) {
 
         // if (!stream) return;
 
+        // setRemoteStreams((prev) => {
+        //   const map = new Map(prev.map((s) => [s.id, s.stream]));
+        //   map.set(userId, stream);
+        //   return Array.from(map.entries()).map(([id, stream]) => ({
+        //     id,
+        //     stream,
+        //   }));
+        // });
         setRemoteStreams((prev) => {
-          const map = new Map(prev.map((s) => [s.id, s.stream]));
-          map.set(userId, stream);
-          return Array.from(map.entries()).map(([id, stream]) => ({
-            id,
-            stream,
-          }));
+          const exists = prev.find(
+            (s) => s.id === userId && s.stream.id === stream.id
+          );
+          if (exists) return prev;
+
+          // 🔁 force rebind by adding timestamp or copy of stream
+          const clone = stream.clone();
+          return [
+            ...prev.filter((s) => s.id !== userId),
+            { id: userId, stream: clone },
+          ];
         });
 
         console.log("REMOTESTREAMS-1:", remoteStreams);
