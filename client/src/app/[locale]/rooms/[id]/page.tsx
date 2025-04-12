@@ -147,14 +147,14 @@ export default function RoomPage() {
     }
   }, [stream, localUserId, setupSpeakingDetection]);
 
-  // useEffect(() => {
-  //   remoteStreams.forEach(({ id, stream }) => {
-  //     if (!analyserRefs.current[id]) {
-  //       console.log("🔁 Force setting up analyser for", id);
-  //       setupSpeakingDetection(id, stream, false);
-  //     }
-  //   });
-  // }, [remoteStreams, setupSpeakingDetection]);
+  useEffect(() => {
+    remoteStreams.forEach(({ id, stream }) => {
+      if (!analyserRefs.current[id]) {
+        console.log("🔁 Force setting up analyser for", id);
+        setupSpeakingDetection(id, stream, false);
+      }
+    });
+  }, [remoteStreams, setupSpeakingDetection]);
 
   useEffect(() => {
     const unlockAudio = () => {
@@ -210,6 +210,12 @@ export default function RoomPage() {
     if (remoteStreams.length === 0) {
       console.warn("🚨 remoteStreams reset detected!");
     }
+  }, [remoteStreams]);
+
+  useEffect(() => {
+    remoteStreams.forEach(({ id, stream }) => {
+      console.log("🧪 REMOTE AUDIO CHECK", id, stream.getAudioTracks());
+    });
   }, [remoteStreams]);
 
   remoteStreams.forEach(({ stream }) => {
@@ -347,17 +353,17 @@ export default function RoomPage() {
         .filter(({ id }) => id !== localUserId)
         .map(({ id, stream }) => (
           <audio
-            key={`${id}-${stream.id}-${Date.now()}`}
+            key={`${id}-${stream.id}`}
             id={`remote-audio-${id}`}
             autoPlay
             playsInline
             ref={(el) => {
               if (el && stream && el.srcObject !== stream) {
                 el.srcObject = stream;
+                el.muted = false;
+                el.volume = 1.0;
                 el.play()
                   .then(() => {
-                    el.muted = false;
-                    el.volume = 1.0;
                     console.log("🔊 JSX audio auto-played:", id);
                   })
                   .catch((e) =>

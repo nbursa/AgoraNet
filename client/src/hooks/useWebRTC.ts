@@ -265,7 +265,7 @@ export function useWebRTC(roomId: string) {
 
       return peer;
     },
-    [send]
+    [remoteStreams, send]
   );
 
   const leaveRoom = useCallback(() => {
@@ -516,16 +516,16 @@ export function useWebRTC(roomId: string) {
 
               console.log("📥 Got offer. Peer state:", peer.signalingState);
 
-              if (
-                peer.signalingState !== "stable" &&
-                peer.signalingState !== "have-local-offer"
-              ) {
-                console.warn(
-                  "⛔ Offer received in invalid state:",
-                  peer.signalingState
-                );
-                return;
-              }
+              // if (
+              //   peer.signalingState !== "stable" &&
+              //   peer.signalingState !== "have-local-offer"
+              // ) {
+              //   console.warn(
+              //     "⛔ Offer received in invalid state:",
+              //     peer.signalingState
+              //   );
+              //   return;
+              // }
 
               peer
                 .setRemoteDescription(new RTCSessionDescription(message.offer))
