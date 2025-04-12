@@ -358,17 +358,39 @@ export default function RoomPage() {
             autoPlay
             playsInline
             ref={(el) => {
-              if (el && stream && el.srcObject !== stream) {
+              if (!el || !stream) return;
+
+              try {
                 el.srcObject = stream;
                 el.muted = false;
                 el.volume = 1.0;
-                el.play()
-                  .then(() => {
-                    console.log("🔊 JSX audio auto-played:", id);
-                  })
-                  .catch((e) =>
-                    console.warn("⚠️ JSX audio play() failed for", id, e)
-                  );
+
+                const attemptPlay = () => {
+                  el.play().catch((e) => {
+                    console.warn(
+                      "⚠️ play() blocked, waiting for user gesture",
+                      id,
+                      e
+                    );
+                    const unlock = () => {
+                      el.play().catch(console.error);
+                      window.removeEventListener("click", unlock);
+                    };
+                    window.addEventListener("click", unlock);
+                  });
+                };
+
+                // Delay play() until stream has real audio tracks
+                const waitForTracks = () => {
+                  if (stream.getAudioTracks().length === 0) {
+                    setTimeout(waitForTracks, 100);
+                  } else {
+                    attemptPlay();
+                  }
+                };
+                waitForTracks();
+              } catch (err) {
+                console.error("❌ Remote audio binding failed:", id, err);
               }
             }}
             className="hidden"
