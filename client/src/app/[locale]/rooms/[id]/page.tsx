@@ -351,7 +351,6 @@ export default function RoomPage() {
             id={`remote-audio-${id}`}
             autoPlay
             playsInline
-            muted={false}
             ref={(el) => {
               if (el && stream && el.srcObject !== stream) {
                 el.srcObject = stream;
