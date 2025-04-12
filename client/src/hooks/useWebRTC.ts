@@ -230,10 +230,10 @@ export function useWebRTC(roomId: string) {
           if (exists) return prev;
 
           // 🔁 force rebind by adding timestamp or copy of stream
-          const clone = stream.clone();
+          // const clone = stream.clone();
           return [
             ...prev.filter((s) => s.id !== userId),
-            { id: userId, stream: clone },
+            { id: userId, stream },
           ];
         });
 
@@ -586,10 +586,26 @@ export function useWebRTC(roomId: string) {
               }
               break;
 
+            // case "ice-candidate":
+            //   peersRef.current[message.userId]?.addIceCandidate(
+            //     new RTCIceCandidate(message.candidate)
+            //   );
+            //   break;
             case "ice-candidate":
-              peersRef.current[message.userId]?.addIceCandidate(
-                new RTCIceCandidate(message.candidate)
-              );
+              const targetPeer = peersRef.current[message.userId];
+              if (
+                targetPeer?.remoteDescription &&
+                targetPeer.remoteDescription.type
+              ) {
+                targetPeer
+                  .addIceCandidate(new RTCIceCandidate(message.candidate))
+                  .catch(console.error);
+              } else {
+                console.warn(
+                  "🧊 Skipping ICE candidate, remoteDescription not ready for",
+                  message.userId
+                );
+              }
               break;
 
             case "leave":
