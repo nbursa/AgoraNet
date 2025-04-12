@@ -527,23 +527,41 @@ export function useWebRTC(roomId: string) {
               //   return;
               // }
 
-              peer
-                .setRemoteDescription(new RTCSessionDescription(message.offer))
-                .then(() => peer.createAnswer())
-                .then((answer) =>
-                  peer.setLocalDescription(answer).then(() => answer)
-                )
-                .then((answer) => {
-                  send({
-                    type: "answer",
-                    userId: message.userId,
-                    answer,
-                  });
-                  console.log("📨 Sent answer to", message.userId);
-                })
-                .catch((err) => {
-                  console.error("❌ Error during answer handshake:", err);
-                });
+              // peer
+              //   .setRemoteDescription(new RTCSessionDescription(message.offer))
+              //   .then(() => peer.createAnswer())
+              //   .then((answer) =>
+              //     peer.setLocalDescription(answer).then(() => answer)
+              //   )
+              //   .then((answer) => {
+              //     send({
+              //       type: "answer",
+              //       userId: message.userId,
+              //       answer,
+              //     });
+              //     console.log("📨 Sent answer to", message.userId);
+              //   })
+              //   .catch((err) => {
+              //     console.error("❌ Error during answer handshake:", err);
+              //   });
+
+              if (peer.signalingState === "have-local-offer") {
+                console.warn("⏪ Rolling back before applying new offer");
+                await peer.setLocalDescription({ type: "rollback" });
+              }
+
+              await peer.setRemoteDescription(
+                new RTCSessionDescription(message.offer)
+              );
+
+              const answer = await peer.createAnswer();
+              await peer.setLocalDescription(answer);
+
+              send({
+                type: "answer",
+                userId: message.userId,
+                answer,
+              });
 
               break;
             }
