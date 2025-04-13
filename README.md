@@ -1,4 +1,4 @@
-# Decentralized Plenum
+# AgoraNet
 
 ![Status](https://img.shields.io/badge/status-in_development-yellow) ![License](https://img.shields.io/badge/license-custom-lightgrey)
 
