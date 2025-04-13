@@ -30,7 +30,7 @@ export const VolumeMeter: React.FC<Props> = ({ analyser }) => {
     draw();
 
     return () => {
-      analyser.disconnect(); // precaution only
+      analyser.disconnect(); // precaution
     };
   }, [analyser]);
 

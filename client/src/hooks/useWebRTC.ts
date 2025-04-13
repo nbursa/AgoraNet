@@ -139,133 +139,88 @@ export function useWebRTC(roomId: string) {
     [send, localUserId, activeVote]
   );
 
+  useEffect(() => {
+    console.log("🔁 remoteStreams updated from hook:", remoteStreams);
+  }, [remoteStreams]);
+
   const createPeer = useCallback(
     (userId: string, initiator: boolean): RTCPeerConnection => {
-      const existing = peersRef.current[userId];
-      if (existing) return existing;
+      if (userId === userIdRef.current) return peersRef.current[userId]!;
 
-      if (existing) {
-        console.warn("⚠️ Tried to create duplicate peer for", userId);
-        return existing;
-      }
+      if (peersRef.current[userId]) return peersRef.current[userId];
 
-      const iceConfig = {
+      const peer = new RTCPeerConnection({
         iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-      };
+      });
 
-      const peer = new RTCPeerConnection(iceConfig);
+      let negotiationLock = false;
 
-      peer.onnegotiationneeded = () => {
-        console.log("📞 onnegotiationneeded for", userId);
-        peer
-          .createOffer()
-          .then((offer) => peer.setLocalDescription(offer))
-          .then(() => {
-            if (peer.localDescription) {
-              send({ type: "offer", userId, offer: peer.localDescription });
-            }
-          })
-          .catch((err) => {
-            console.error("❌ Error in renegotiation:", err);
-          });
-      };
+      peer.onnegotiationneeded = async () => {
+        if (negotiationLock) return;
+        negotiationLock = true;
 
-      peer.onconnectionstatechange = () => {
-        if (peer.connectionState === "connected") {
-          console.log(`✅ Peer ${userId} connected.`);
-        } else if (peer.connectionState === "disconnected") {
-          console.warn(`⚠️ Peer ${userId} disconnected.`);
+        try {
+          const offer = await peer.createOffer();
+          await peer.setLocalDescription(offer);
+          send({ type: "offer", userId, offer });
+        } catch (err) {
+          console.error("❌ Negotiation failed:", err);
+        } finally {
+          setTimeout(() => {
+            negotiationLock = false;
+          }, 1000);
         }
       };
 
-      peer.oniceconnectionstatechange = () => {
-        console.log("📡 ICE state for", userId, peer.iceConnectionState);
-        if (peer.iceConnectionState === "connected") {
-          console.log("✅ Peer connected:", userId);
-        }
-        if (peer.iceConnectionState === "failed") {
-          console.error("❌ ICE connection failed for", userId);
-          peer.restartIce();
-        }
-      };
-
-      peer.onicecandidate = (event) => {
-        if (event.candidate) {
-          console.log("📡 Sending ICE candidate to", userId);
-
+      peer.onicecandidate = (e) => {
+        if (e.candidate) {
           send({
             type: "ice-candidate",
             userId,
-            candidate: event.candidate.toJSON(),
+            candidate: e.candidate.toJSON(),
           });
-        } else {
-          console.log("📡 ICE candidate gathering finished for", userId);
         }
       };
 
       peer.ontrack = (event) => {
-        console.log("🎧 TRACK from", userId, event.track.kind);
-
-        if (!event.streams?.[0]) {
-          console.warn("⚠️ No stream in ontrack event");
-          return;
-        }
-
+        console.log("🔊 ontrack fired for", userId, event);
         const stream = event.streams?.[0];
-
-        // if (!stream) return;
-
-        // setRemoteStreams((prev) => {
-        //   const map = new Map(prev.map((s) => [s.id, s.stream]));
-        //   map.set(userId, stream);
-        //   return Array.from(map.entries()).map(([id, stream]) => ({
-        //     id,
-        //     stream,
-        //   }));
-        // });
+        if (!stream) return;
         setRemoteStreams((prev) => {
-          const exists = prev.find(
+          const exists = prev.some(
             (s) => s.id === userId && s.stream.id === stream.id
           );
           if (exists) return prev;
-
-          // 🔁 force rebind by adding timestamp or copy of stream
-          // const clone = stream.clone();
           return [
             ...prev.filter((s) => s.id !== userId),
             { id: userId, stream },
           ];
         });
-
-        console.log("REMOTESTREAMS-1:", remoteStreams);
       };
 
-      if (initiator) {
-        peer
-          .createOffer()
-          .then((offer) => peer.setLocalDescription(offer))
-          .then(() => {
-            if (peer.localDescription) {
-              send({ type: "offer", userId, offer: peer.localDescription });
-            }
-          })
-          .catch((err) => {
-            console.error("Error creating offer:", err);
-          });
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach((track) => {
+          const alreadySent = peer
+            .getSenders()
+            .some((s) => s.track?.id === track.id);
+          if (!alreadySent) {
+            console.log("🎤 Adding local track to peer:", userId, track.kind);
+            peer.addTrack(track, localStreamRef.current!);
+          }
+        });
       }
 
       peersRef.current[userId] = peer;
 
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach((track) => {
-          console.log("🎤 Adding local track to peer:", userId, track.kind);
-          peer.addTrack(track, localStreamRef.current!);
-        });
+      if (initiator) {
+        setTimeout(() => {
+          console.log("📞 onnegotiationneeded trigger (noop)");
+        }, 0);
       }
 
       return peer;
     },
-    [remoteStreams, send]
+    [send]
   );
 
   const leaveRoom = useCallback(() => {
@@ -510,40 +465,16 @@ export function useWebRTC(roomId: string) {
               break;
 
             case "offer": {
+              if (message.userId === userIdRef.current) {
+                console.warn("🛑 Skipping self offer from", message.userId);
+                return;
+              }
+
               const peer =
                 peersRef.current[message.userId] ||
                 createPeer(message.userId, false);
 
               console.log("📥 Got offer. Peer state:", peer.signalingState);
-
-              // if (
-              //   peer.signalingState !== "stable" &&
-              //   peer.signalingState !== "have-local-offer"
-              // ) {
-              //   console.warn(
-              //     "⛔ Offer received in invalid state:",
-              //     peer.signalingState
-              //   );
-              //   return;
-              // }
-
-              // peer
-              //   .setRemoteDescription(new RTCSessionDescription(message.offer))
-              //   .then(() => peer.createAnswer())
-              //   .then((answer) =>
-              //     peer.setLocalDescription(answer).then(() => answer)
-              //   )
-              //   .then((answer) => {
-              //     send({
-              //       type: "answer",
-              //       userId: message.userId,
-              //       answer,
-              //     });
-              //     console.log("📨 Sent answer to", message.userId);
-              //   })
-              //   .catch((err) => {
-              //     console.error("❌ Error during answer handshake:", err);
-              //   });
 
               if (peer.signalingState === "have-local-offer") {
                 console.warn("⏪ Rolling back before applying new offer");
@@ -586,12 +517,15 @@ export function useWebRTC(roomId: string) {
               }
               break;
 
-            // case "ice-candidate":
-            //   peersRef.current[message.userId]?.addIceCandidate(
-            //     new RTCIceCandidate(message.candidate)
-            //   );
-            //   break;
             case "ice-candidate":
+              if (message.userId === userIdRef.current) {
+                console.warn(
+                  "🛑 Skipping self ICE candidate from",
+                  message.userId
+                );
+                return;
+              }
+
               const targetPeer = peersRef.current[message.userId];
               if (
                 targetPeer?.remoteDescription &&

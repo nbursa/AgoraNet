@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
-import { useWebRTC, VoteResult } from "@/hooks/useWebRTC";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/Button";
 import { VolumeMeter } from "@/components/VolumeMeter";
+import { SpeakingAnalyzer } from "@/components/SpeakingAnalyzer";
+import { VoteResult, useWebRTC } from "@/hooks/useWebRTC";
 
 type LegacyVoteResult = VoteResult & {
   yesCount?: number;
@@ -83,55 +84,6 @@ export default function RoomPage() {
     }
   }, [stream]);
 
-  const setupSpeakingDetection = useCallback(
-    (userId: string, mediaStream: MediaStream, isLocal: boolean) => {
-      if (analyserRefs.current[userId]) return;
-
-      if (!audioContextRef.current)
-        audioContextRef.current = new AudioContext();
-      const audioContext = audioContextRef.current;
-
-      if (audioContext.state === "suspended") {
-        audioContext.resume().catch(console.error);
-      }
-
-      const source = audioContext.createMediaStreamSource(mediaStream);
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 512;
-      const dataArray = new Uint8Array(analyser.frequencyBinCount);
-      source.connect(analyser);
-      analyserRefs.current[userId] = analyser;
-
-      let prevSpeaking = false;
-      const detect = () => {
-        analyser.getByteFrequencyData(dataArray);
-        const volume = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-        const isSpeaking = volume > 5;
-        if (isLocal) {
-          const audioTrack = mediaStream.getAudioTracks()[0];
-          const isMicEnabled = audioTrack?.enabled;
-          const finalSpeaking = isMicEnabled && isSpeaking;
-          if (finalSpeaking !== prevSpeaking) {
-            sendSpeakingStatus(finalSpeaking);
-            prevSpeaking = finalSpeaking;
-          }
-        } else {
-          if (isSpeaking && !prevSpeaking) {
-            window.dispatchEvent(
-              new CustomEvent("remote-speaking", { detail: { userId } })
-            );
-            prevSpeaking = true;
-          } else if (!isSpeaking && prevSpeaking) {
-            prevSpeaking = false;
-          }
-        }
-        requestAnimationFrame(detect);
-      };
-      detect();
-    },
-    [sendSpeakingStatus]
-  );
-
   useEffect(() => {
     document.title = `${t("title")} - ${id}`;
   }, [id, t]);
@@ -143,18 +95,16 @@ export default function RoomPage() {
         audioTrack.enabled = false;
         setIsMicMuted(true);
       }
-      setupSpeakingDetection(localUserId, stream, true);
     }
-  }, [stream, localUserId, setupSpeakingDetection]);
+  }, [stream, localUserId]);
 
   useEffect(() => {
-    remoteStreams.forEach(({ id, stream }) => {
+    remoteStreams.forEach(({ id }) => {
       if (!analyserRefs.current[id]) {
         console.log("🔁 Force setting up analyser for", id);
-        setupSpeakingDetection(id, stream, false);
       }
     });
-  }, [remoteStreams, setupSpeakingDetection]);
+  }, [remoteStreams]);
 
   useEffect(() => {
     const unlockAudio = () => {
@@ -251,7 +201,6 @@ export default function RoomPage() {
       const enabled = !audioTrack.enabled;
       audioTrack.enabled = enabled;
       setIsMicMuted(!enabled);
-      setupSpeakingDetection(localUserId, stream, true);
     }
   };
 
@@ -338,63 +287,85 @@ export default function RoomPage() {
         </div>
       </aside>
 
-      {stream && (
-        <audio
-          key={`${id}-${stream.id}-${stream.active}`}
-          ref={streamAudio}
-          autoPlay
-          playsInline
-          controls
-          className="hidden"
-        />
+      {stream && localUserId && (
+        <>
+          <audio
+            key={`${id}-${stream.id}-${stream.active}`}
+            ref={streamAudio}
+            autoPlay
+            playsInline
+            controls
+            className="hidden"
+          />
+          <SpeakingAnalyzer
+            userId={localUserId}
+            stream={stream}
+            isLocal={true}
+            sendSpeakingStatus={sendSpeakingStatus}
+            onAnalyserReady={(analyser) => {
+              analyserRefs.current[localUserId] = analyser;
+            }}
+          />
+        </>
       )}
 
       {remoteStreams
         .filter(({ id }) => id !== localUserId)
         .map(({ id, stream }) => (
-          <audio
-            key={`${id}-${stream.id}`}
-            id={`remote-audio-${id}`}
-            autoPlay
-            playsInline
-            ref={(el) => {
-              if (!el || !stream) return;
+          <>
+            <audio
+              key={`${id}-${stream.id}`}
+              id={`remote-audio-${id}`}
+              autoPlay
+              playsInline
+              ref={(el) => {
+                if (!el || !stream) return;
 
-              try {
-                el.srcObject = stream;
-                el.muted = false;
-                el.volume = 1.0;
+                try {
+                  el.srcObject = stream;
+                  el.muted = false;
+                  el.volume = 1.0;
 
-                const attemptPlay = () => {
-                  el.play().catch((e) => {
-                    console.warn(
-                      "⚠️ play() blocked, waiting for user gesture",
-                      id,
-                      e
-                    );
-                    const unlock = () => {
-                      el.play().catch(console.error);
-                      window.removeEventListener("click", unlock);
-                    };
-                    window.addEventListener("click", unlock);
-                  });
-                };
+                  const attemptPlay = () => {
+                    el.play().catch((e) => {
+                      console.warn(
+                        "⚠️ play() blocked, waiting for user gesture",
+                        id,
+                        e
+                      );
+                      const unlock = () => {
+                        el.play().catch(console.error);
+                        window.removeEventListener("click", unlock);
+                      };
+                      window.addEventListener("click", unlock);
+                    });
+                  };
 
-                // Delay play() until stream has real audio tracks
-                const waitForTracks = () => {
-                  if (stream.getAudioTracks().length === 0) {
-                    setTimeout(waitForTracks, 100);
-                  } else {
-                    attemptPlay();
-                  }
-                };
-                waitForTracks();
-              } catch (err) {
-                console.error("❌ Remote audio binding failed:", id, err);
-              }
-            }}
-            className="hidden"
-          />
+                  // Delay play() until stream has real audio tracks
+                  const waitForTracks = () => {
+                    if (stream.getAudioTracks().length === 0) {
+                      setTimeout(waitForTracks, 100);
+                    } else {
+                      attemptPlay();
+                    }
+                  };
+                  waitForTracks();
+                } catch (err) {
+                  console.error("❌ Remote audio binding failed:", id, err);
+                }
+              }}
+              // className="hidden"
+            />
+
+            <SpeakingAnalyzer
+              userId={id}
+              stream={stream}
+              isLocal={false}
+              onAnalyserReady={(analyser) => {
+                analyserRefs.current[id] = analyser;
+              }}
+            />
+          </>
         ))}
 
       <main className="flex-1 overflow-y-auto">
