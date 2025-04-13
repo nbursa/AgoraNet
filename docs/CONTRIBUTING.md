@@ -1,4 +1,4 @@
-# Contributing to Decentralized Plenum
+# Contributing to AgoraNet
 
 Thanks for your interest! Contributions are welcome.
 
@@ -19,4 +19,4 @@ Thanks for your interest! Contributions are welcome.
 
 For major changes, please open an issue first to discuss.
 
-Thanks for helping improve Decentralized Plenum! 🙌
+Thanks for helping improve AgoraNet! 🙌

@@ -1,4 +1,4 @@
-# Decentralized Plenum License
+# AgoraNet License
 
 Copyright (c) 2025 Nenad Bursać. All rights reserved.
 

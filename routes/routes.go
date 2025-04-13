@@ -5,15 +5,15 @@ import (
 	"os"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/nbursa/decentralized-plenum/controllers"
-	"github.com/nbursa/decentralized-plenum/middleware"
+	"github.com/nbursa/agoranet/controllers"
+	"github.com/nbursa/agoranet/middleware"
 )
 
 func SetupRoutes(app *fiber.App) {
 	fmt.Println("🔧 Setting up routes...")
 
 	app.Get("/", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{"message": "Decentralized Plenum API is running"})
+		return c.JSON(fiber.Map{"message": "AgoraNet API is running"})
 	})
 
 	auth := app.Group("/auth")

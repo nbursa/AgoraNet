@@ -1,6 +1,6 @@
-# Decentralized Plenum Architecture
+# AgoraNet Architecture
 
-This document provides an overview of the architectural design of **Decentralized Plenum**, a peer-to-peer platform facilitating secure, anonymous, and decentralized communication and voting.
+This document provides an overview of the architectural design of **AgoraNet**, a peer-to-peer platform facilitating secure, anonymous, and decentralized communication and voting.
 
 ## System Components
 

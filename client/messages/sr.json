@@ -1,7 +1,7 @@
 {
   "common": {
-    "title": "Decentralizovani Plenumi",
-    "rooms": "Plenumi",
+    "title": "AgoraNet",
+    "rooms": "Sobe",
     "dashboard": "Panel",
     "about": "Info",
     "login": "Prijava",
@@ -10,33 +10,33 @@
   },
   "navigation": {
     "home": "Početna",
-    "rooms": "Plenumi",
+    "rooms": "Sobe",
     "dashboard": "Panel",
     "about": "Info",
     "login": "Prijavi se",
     "logout": "Odjavi se"
   },
   "home": {
-    "title": "Decentralizovani Plenumi",
+    "title": "AgoraNet",
     "description": "Sigurni, decentralizovani sastanci, diskusije i glasanja",
-    "longDescription": "Decentralizovani Plenum je prostor otporan na cenzuru za glasovne javne diskusije, kolektivno odlučivanje i anonimno učešće — osmišljen da osnaži zajednice pomoću bezbednih, direktnih alata za komunikaciju u realnom vremenu.",
-    "viewRooms": "Pogledaj Aktivne Plenume",
-    "createRoom": "Kreiraj Novi Plenum",
-    "loginRequired": "Morate biti prijavljeni da biste pristupili plenumima.",
+    "longDescription": "AgoraNet je prostor otporan na cenzuru za glasovne javne diskusije, kolektivno odlučivanje i anonimno učešće — osmišljen da osnaži zajednice pomoću bezbednih, direktnih alata za komunikaciju u realnom vremenu.",
+    "viewRooms": "Pogledaj Aktivne Sobe",
+    "createRoom": "Kreiraj Novu Sobu",
+    "loginRequired": "Morate biti prijavljeni da biste pristupili sobama.",
     "loginBtn": "Prijava / Registracija"
   },
   "about": {
     "pageTitle": "Info Strana",
-    "title": "Šta je Decentralizovani Plenum?",
+    "title": "Šta je AgoraNet?",
     "description": {
-      "part1": "Decentralizovani Plenum je bezbedno online mesto za",
+      "part1": "AgoraNet je bezbedno online mesto za",
       "strong": "otvorene diskusije, anonimno učešće i zajedničko donošenje odluka",
-      "part2": ". Možete da se pridružite glasovnim sobama(plenumima), slobodno govorite, delite dokumenta i glasate o važnim pitanjima — bez naloga i otkrivanja identiteta."
+      "part2": ". Možete da se pridružite glasovnim sobama, slobodno govorite, delite dokumenta i glasate o važnim pitanjima — bez naloga i otkrivanja identiteta."
     },
     "features": {
       "title": "Šta možete da radite",
       "items": [
-        "Odmah se priključite ili napravite glasovnu sobu(Plenum)",
+        "Odmah se priključite ili napravite glasovnu sobu",
         "Govorte anonimno i bezbedno",
         "Kreirajte i glasajte o vašim pitanjima (da/ne)",
         "Delite i preuzmite podeljena dokumenta sa svim učesnicima",
@@ -49,7 +49,7 @@
     },
     "getInvolved": {
       "title": "Zašto koristiti?",
-      "text": "Decentralizovani Plenum je napravljen da štiti slobodu govora i omogući zajednicama da se bezbedno organizuju. Radi bez centralne kontrole i vraća moć korisnicima."
+      "text": "AgoraNet je napravljen da štiti slobodu govora i omogući zajednicama da se bezbedno organizuju. Radi bez centralne kontrole i vraća moć korisnicima."
     },
     "backToHome": "Nazad na početnu"
   },
@@ -83,10 +83,10 @@
   },
   "dashboard": {
     "title": "Kontrolna tabla",
-    "description": "Dobrodošli na vašu decentralizovanu kontrolnu tablu. Ovde možete pratiti plenume, glasanja, deljene fajlove i upravljati svojim prisustvom u plenumu.",
-    "room": "Plenum",
+    "description": "Dobrodošli na vašu decentralizovanu kontrolnu tablu. Ovde možete pratiti sobe, glasanja, deljene fajlove i upravljati svojim prisustvom u sobama.",
+    "room": "Soba",
     "rooms": {
-      "title": "Aktivni Plenumi",
+      "title": "Aktivne Sobe",
       "noRooms": "Nema aktivnih soba",
       "description": "Imate 3 tekuće diskusije.",
       "viewDetails": "Pogledaj detalje"
@@ -110,28 +110,28 @@
     }
   },
   "rooms": {
-    "title": "Aktivni Plenumi",
-    "description": "Upravljajte vašim prostorima za diskusiju",
-    "create": "Kreiraj novi plenum",
-    "available": "Dostupni plenumi",
+    "title": "Aktivne Sobe",
+    "description": "Upravljajte vašim sobama za diskusiju",
+    "create": "Kreiraj novu sobu",
+    "available": "Dostupne sobe",
     "delete": "Obriši",
     "noRooms": "Nema aktivnih soba"
   },
   "room": {
-    "title": "Plenum",
-    "copy": "Kopiraj link plenuma",
+    "title": "Soba",
+    "copy": "Kopiraj link sobe",
     "copied": "Kopirano!",
     "you": "Ti",
     "host": "Domaćin",
     "guest": "Gost",
-    "room": "Plenum",
+    "room": "Soba",
     "mic": "Vaš mikrofon",
     "share": "Podeli dokument",
     "choose": "Prikaži fajl",
     "preview": "Pregled deljenog sadržaja",
     "close": "Zatvori",
     "download": "Preuzmi",
-    "leave": "Napusti plenum",
+    "leave": "Napusti sobu",
     "mute": "Isključi zvuk",
     "unmute": "Uključi zvuk",
     "loading": "Učitavanje",

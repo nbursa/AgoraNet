@@ -4,7 +4,7 @@
 
 [Architecture Overview](./docs/ARCHITECTURE.md) • [License](./LICENSE.md) • [Contributing](./docs/CONTRIBUTING.md)
 
-**Decentralized Plenum** is an innovative peer-to-peer platform designed for secure, anonymous, and censorship-resistant digital communication and decision-making. Plenum enables users to create decentralized voice rooms, hold anonymous or public votes, and securely share media.
+**AgoraNet** is an innovative peer-to-peer platform designed for secure, anonymous, and censorship-resistant digital communication and decision-making. AgoraNet enables users to create decentralized voice rooms, hold anonymous or public votes, and securely share media.
 
 ## Features
 
@@ -35,7 +35,7 @@
 
 ## Architecture Overview
 
-Decentralized Plenum leverages a modular architecture to ensure clear separation of concerns:
+AgoraNet leverages a modular architecture to ensure clear separation of concerns:
 
 - **Frontend** manages UI, real-time interactions (WebRTC), and persistent client-side state.
 - **Backend** handles WebRTC signaling, real-time message broadcasting, room state persistence, and synchronization.

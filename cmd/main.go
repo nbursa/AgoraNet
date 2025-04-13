@@ -13,13 +13,13 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	ws "github.com/gofiber/websocket/v2"
 
-	"github.com/nbursa/decentralized-plenum/config"
-	"github.com/nbursa/decentralized-plenum/routes"
-	"github.com/nbursa/decentralized-plenum/services"
+	"github.com/nbursa/agoranet/config"
+	"github.com/nbursa/agoranet/routes"
+	"github.com/nbursa/agoranet/services"
 )
 
 func main() {
-	fmt.Println("Starting Decentralized Plenum Backend...")
+	fmt.Println("Starting AgoraNet Backend...")
 
 	if os.Getenv("DYNO") == "" {
 		if err := godotenv.Load(); err != nil {

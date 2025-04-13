@@ -1,4 +1,4 @@
-module github.com/nbursa/decentralized-plenum
+module github.com/nbursa/agoranet
 
 go 1.24.1
 

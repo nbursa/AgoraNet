@@ -1,6 +1,6 @@
 {
   "common": {
-    "title": "Decentralized Meetings",
+    "title": "AgoraNet",
     "rooms": "Rooms",
     "dashboard": "Dashboard",
     "about": "About",
@@ -17,9 +17,9 @@
     "logout": "Logout"
   },
   "home": {
-    "title": "Decentralized Meetings",
+    "title": "AgoraNet",
     "description": "Secure, decentralized meetings, discussions & voting",
-    "longDescription": "Decentralized Plenum is a censorship-resistant space for voice-based public discussions, collective decisions, and anonymous participation — designed to empower communities with real-time, secure peer-to-peer tools.",
+    "longDescription": "AgoraNet is a censorship-resistant space for voice-based public discussions, collective decisions, and anonymous participation — designed to empower communities with real-time, secure peer-to-peer tools.",
     "viewRooms": "View Active Rooms",
     "createRoom": "Create New Room",
     "loginRequired": "You must be logged in to access rooms.",
@@ -27,9 +27,9 @@
   },
   "about": {
     "pageTitle": "About Page",
-    "title": "What is Decentralized Plenum?",
+    "title": "What is AgoraNet?",
     "description": {
-      "part1": "Decentralized Plenum is a secure online space for",
+      "part1": "AgoraNet is a secure online space for",
       "strong": "open discussions, anonymous participation, and collective decision-making",
       "part2": ". You can join voice-based rooms, speak freely, share documents, and vote on important topics — without needing an account or revealing your identity."
     },
@@ -49,7 +49,7 @@
     },
     "getInvolved": {
       "title": "Why Use It?",
-      "text": "Decentralized Plenum is built to protect free speech and help communities organize safely. It works without central control and gives power back to the people using it."
+      "text": "AgoraNet is built to protect free speech and help communities organize safely. It works without central control and gives power back to the people using it."
     },
     "backToHome": "Back to Home"
   },
@@ -85,7 +85,7 @@
   },
   "dashboard": {
     "title": "Dashboard",
-    "description": "Welcome to your decentralized dashboard. Here you can monitor your rooms, votes, shared files, and manage your presence in the plenum.",
+    "description": "Welcome to your decentralized dashboard. Here you can monitor your rooms, votes, shared files, and manage your presence.",
     "room": "Room",
     "rooms": {
       "title": "Active Rooms",
