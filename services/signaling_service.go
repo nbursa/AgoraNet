@@ -96,14 +96,17 @@ func handleMessage(client *Client, msg map[string]interface{}) {
 			client.RoomID = roomID
 			registerClient(roomID, client, isCreator)
 		}
+
 	case "offer", "answer", "ice-candidate":
 		if targetID, ok := msg["userId"].(string); ok {
 			msg["from"] = client.ID
 			log.Printf("📡 Forwarding %s from %s to %s", msg["type"], msg["from"], targetID)
 			forwardMessage(targetID, msg)
 		}
+
 	case "leave":
 		removeClient(client)
+
 	case "share-media":
 		if url, ok := msg["url"].(string); ok {
 			if mediaType, ok2 := msg["mediaType"].(string); ok2 {
@@ -120,6 +123,7 @@ func handleMessage(client *Client, msg map[string]interface{}) {
 				roomLock.Unlock()
 			}
 		}
+
 	case "create-vote":
 		if question, ok := msg["question"].(string); ok {
 			roomLock.Lock()
@@ -130,6 +134,7 @@ func handleMessage(client *Client, msg map[string]interface{}) {
 			}
 			roomLock.Unlock()
 		}
+
 	case "end-vote":
 		roomLock.Lock()
 		if room, exists := rooms[client.RoomID]; exists && room.HostID == client.ID {
@@ -152,6 +157,7 @@ func handleMessage(client *Client, msg map[string]interface{}) {
 			broadcastRoomState(client.RoomID)
 		}
 		roomLock.Unlock()
+
 	case "vote":
 		if userID, ok1 := msg["userId"].(string); ok1 {
 			if value, ok2 := msg["value"].(string); ok2 {
@@ -163,6 +169,7 @@ func handleMessage(client *Client, msg map[string]interface{}) {
 				roomLock.Unlock()
 			}
 		}
+		
 	case "speaking":
 		if isSpeaking, ok := msg["isSpeaking"].(bool); ok {
 			broadcastMessage(client.RoomID, map[string]interface{}{
