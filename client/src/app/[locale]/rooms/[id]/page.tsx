@@ -69,6 +69,10 @@ export default function RoomPage() {
   const streamAudio = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
+    document.title = `${t("title")} - ${id}`;
+  }, [id, t]);
+
+  useEffect(() => {
     if (stream && streamAudio.current) {
       streamAudio.current.srcObject = stream;
       streamAudio.current
@@ -83,10 +87,6 @@ export default function RoomPage() {
         });
     }
   }, [stream]);
-
-  useEffect(() => {
-    document.title = `${t("title")} - ${id}`;
-  }, [id, t]);
 
   useEffect(() => {
     if (typeof window !== "undefined" && stream && localUserId) {
@@ -119,10 +119,6 @@ export default function RoomPage() {
     window.addEventListener("click", unlockAudio);
     return () => window.removeEventListener("click", unlockAudio);
   }, [id]);
-
-  useEffect(() => {
-    console.log("🔁 Remote streams updated:", remoteStreams);
-  }, [remoteStreams]);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -161,18 +157,6 @@ export default function RoomPage() {
       console.warn("🚨 remoteStreams reset detected!");
     }
   }, [remoteStreams]);
-
-  useEffect(() => {
-    remoteStreams.forEach(({ id, stream }) => {
-      console.log("🧪 REMOTE AUDIO CHECK", id, stream.getAudioTracks());
-    });
-  }, [remoteStreams]);
-
-  remoteStreams.forEach(({ stream }) => {
-    if (stream.getTracks().length === 0) {
-      console.warn("🚨 Stream has no tracks, likely hydration issue");
-    }
-  });
 
   if (!hydrated) return null;
 
